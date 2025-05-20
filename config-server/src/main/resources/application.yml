@@ -8,6 +8,6 @@ spring:
     config:
       server:
         git:
-          uri: https://github.com/your-org/your-config-repo
+          uri: https://github.com/sameepmondhe/microservices-with-java/tree/main/config-server/src/main/configs
           default-label: main
           clone-on-start: true
