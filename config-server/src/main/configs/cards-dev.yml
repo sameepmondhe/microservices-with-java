@@ -1,0 +1,15 @@
+server:
+  port: 8083
+
+spring:
+  application:
+    name: cards
+
+data:
+  mongodb:
+    host: localhost
+    port: 27017
+    database: ms-with-spring-cloud
+
+build:
+  version: 1.0-CARDS

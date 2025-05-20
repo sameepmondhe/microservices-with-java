@@ -1,0 +1,15 @@
+server:
+  port: 8082
+
+spring:
+  application:
+    name: loans
+
+data:
+  mongodb:
+    host: localhost
+    port: 27017
+    database: ms-with-spring-cloud
+
+build:
+  version: 1.0-LOANS
