@@ -20,3 +20,21 @@ gradle-app.setting
 # JDT-specific (Eclipse Java Development Tools)
 .classpath
 /.idea/
+.DS_Store
+accounts/.gitattributes
+accounts/gradlew
+accounts/build.gradle
+accounts/gradle/wrapper/gradle-wrapper.jar
+accounts/gradle/wrapper/gradle-wrapper.properties
+accounts/gradle/wrapper/gradle-wrapper.jar
+accounts/gradlew.bat
+gradlew
+gradlew.bat
+loans/.gitattributes
+gradle/wrapper/gradle-wrapper.properties
+gradle/wrapper/gradle-wrapper.jar
+accounts/gradle/wrapper/gradle-wrapper.jar
+/accounts/gradle/wrapper
+/loans/gradle/wrapper
+cards/.gitattributes
+/cards/gradle

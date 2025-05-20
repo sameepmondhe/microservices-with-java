@@ -1,0 +1,3 @@
+rootProject.name = 'microservices-with-java'
+
+include 'accounts', 'loans', 'cards'
