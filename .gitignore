@@ -38,3 +38,5 @@ accounts/gradle/wrapper/gradle-wrapper.jar
 /loans/gradle/wrapper
 cards/.gitattributes
 /cards/gradle
+config-server/.gitattributes
+/config-server/gradle
