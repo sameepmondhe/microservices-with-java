@@ -23,7 +23,6 @@ gradle-app.setting
 .DS_Store
 accounts/.gitattributes
 accounts/gradlew
-accounts/build.gradle
 accounts/gradle/wrapper/gradle-wrapper.jar
 accounts/gradle/wrapper/gradle-wrapper.properties
 accounts/gradle/wrapper/gradle-wrapper.jar

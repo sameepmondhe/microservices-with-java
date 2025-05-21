@@ -12,5 +12,5 @@ spring:
           #search-locations: "file://Users//Sameep.Mondhe//learning//ms//microservices-with-java//config-server//src//main//resources//configs/"
         git:
           uri: https://github.com/sameepmondhe/microservices-with-java.git
-          search-paths: config-server/src/main/configs
+          search-paths: configs
           default-label: main
