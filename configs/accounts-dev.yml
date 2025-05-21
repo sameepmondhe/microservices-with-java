@@ -1,0 +1,9 @@
+server:
+  port: 8081
+
+spring:
+  application:
+    name: accounts
+
+build:
+  version: 1.0-ACCOUNTS
