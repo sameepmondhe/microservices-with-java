@@ -11,3 +11,10 @@ profiles:
 
 server:
   port: 8083
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: refresh,health,info
+

@@ -14,3 +14,10 @@ spring:
           uri: https://github.com/sameepmondhe/microservices-with-java.git
           search-paths: configs
           default-label: main
+
+management:
+  endpoints:
+    web:
+      exposure:
+        include: refresh,health,info
+

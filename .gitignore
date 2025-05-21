@@ -39,3 +39,7 @@ cards/.gitattributes
 /cards/gradle
 config-server/.gitattributes
 /config-server/gradle
+loans.log
+config-server.log
+cards.log
+accounts.log
