@@ -7,14 +7,10 @@ spring:
   cloud:
     config:
       server:
-        native:
-          search-locations: "classpath:/configs/"
-        # search-locations: "file:///Users//eazybytes//Documents//config"
+        # native:
+          # search-locations: "classpath:/configs/"
+          # search-locations: "file:///Users//eazybytes//Documents//config"
         git:
           uri: https://github.com/sameepmondhe/microservices-with-java.git
           search-paths: config-server/src/main/configs
           default-label: main
-          timeout: 5
-          clone-on-start: true
-          force-pull: true
-

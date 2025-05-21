@@ -1,0 +1,8 @@
+data:
+  mongodb:
+    host: localhost
+    port: 27017
+    database: ms-with-spring-cloud
+
+build:
+  version: 1.0-ACCOUNTS
