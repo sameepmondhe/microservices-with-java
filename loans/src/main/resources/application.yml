@@ -1,7 +1,13 @@
 spring:
   application:
     name: loans
+  profiles:
+    active: dev
+  config:
+    import: optional:configserver:http://localhost:8888
 
 profiles:
   active: dev
 
+server:
+  port: 8083
