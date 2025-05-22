@@ -1,6 +1,7 @@
 plugins {
     id 'java'
     id 'org.springframework.boot' version '3.2.5'
+    id 'com.google.cloud.tools.jib' version '3.4.0'
 }
 
 group = 'com.example'
@@ -45,3 +46,10 @@ dependencies {
 tasks.named('test') {
     useJUnitPlatform()
 }
+
+jib {
+    from {
+        image = 'eclipse-temurin:21-jre'
+    }
+}
+

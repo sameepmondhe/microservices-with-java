@@ -7,13 +7,12 @@ spring:
   cloud:
     config:
       server:
-        #native:
-          #search-locations: "classpath:/configs/*"
-          #search-locations: "file://Users//Sameep.Mondhe//learning//ms//microservices-with-java//config-server//src//main//resources//configs/"
         git:
           uri: https://github.com/sameepmondhe/microservices-with-java.git
           search-paths: configs
           default-label: main
+    bus:
+      enabled: false
 
 management:
   endpoint:
@@ -23,4 +22,10 @@ management:
   endpoints:
     web:
       exposure:
-        include: health,info,refresh,health-readiness,health-liveness
+        include: refresh,health,info,health-readiness,health-liveness
+  health:
+    readiness:
+      enabled: true
+    liveness:
+      enabled: true
+
