@@ -1,0 +1,9 @@
+server:
+  port: 8084
+
+spring:
+  application:
+    name: customer
+
+build:
+  version: 1.0-CUSTOMER

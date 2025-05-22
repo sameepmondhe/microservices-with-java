@@ -29,3 +29,4 @@ management:
     liveness:
       enabled: true
 
+

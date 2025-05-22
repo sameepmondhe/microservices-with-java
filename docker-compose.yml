@@ -74,6 +74,25 @@ services:
     networks:
       - msnet
 
+  customer:
+    build:
+      context: ./customer
+      dockerfile: Dockerfile
+    ports:
+      - "8084:8084"
+    environment:
+      - SPRING_PROFILES_ACTIVE=dev
+      - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
+    # depends_on:
+    #   - config-server
+    healthcheck:
+      test: ["CMD", "curl", "-f", "http://localhost:8084/actuator/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+    networks:
+      - msnet
+
 networks:
   msnet:
     driver: bridge

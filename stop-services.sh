@@ -39,5 +39,6 @@ echo -e "\n🛑 Stopping microservices running in Docker containers..."
 stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
+stop_container "customer-service"
 
 echo -e "\n🎉 All services have been stopped!"

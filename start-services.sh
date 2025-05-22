@@ -101,7 +101,8 @@ start_local_service() {
   local port=$2
 
   log_step "Starting $service_name locally on port $port..."
-  (cd "$service_name" && ./gradlew bootRun > /dev/null 2>&1 &)  # background + quiet
+  # Use the root Gradle wrapper instead of the service-specific one
+  (./gradlew :"$service_name":bootRun > /dev/null 2>&1 &)  # background + quiet
   wait_for_service "$service_name" "$port"
 }
 
@@ -109,19 +110,29 @@ start_local_service() {
 
 echo -e "\n🔄 Starting microservices deployment..."
 
-# Step 0: Cleanup
+# Step 0: Build all services using root Gradle wrapper
+log_step "Building all services..."
+if ./gradlew clean build -x test > /dev/null 2>&1; then
+  log_success "All services built successfully."
+else
+  log_error "Failed to build services."
+  exit 1
+fi
+
+# Step 1: Cleanup
 log_step "Stopping any existing services..."
 stop_local_service 8888 "config-server"
 stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
+stop_container "customer-service"
 log_success "Cleanup complete."
 
-# Step 1: Start config-server locally
+# Step 2: Start config-server locally
 start_local_service "config-server" 8888
 sleep 5  # Give it time to fully initialize
 
-# Step 2: Start services in Docker
+# Step 3: Start services in Docker
 build_and_run_service "accounts" 8081
 wait_for_service "accounts" 8081
 
@@ -131,11 +142,14 @@ wait_for_service "loans" 8082
 build_and_run_service "cards" 8083
 wait_for_service "cards" 8083
 
+build_and_run_service "customer" 8084
+wait_for_service "customer" 8084
+
 # Final Summary
 echo -e "\n🎉 All services started successfully!"
 echo "
   - 🛠  Config Server: http://localhost:8888
   - 💰 Accounts:      http://localhost:8081
   - 💳 Cards:         http://localhost:8083
-  - 🏦 Loans:         http://localhost:8082"
-
+  - 🏦 Loans:         http://localhost:8082
+  - 👥 Customer:      http://localhost:8084"
