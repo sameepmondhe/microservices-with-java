@@ -1,4 +1,4 @@
 rootProject.name = 'microservices-with-java'
 
-include 'accounts', 'loans', 'cards', 'config-server', 'customer'
+include 'accounts', 'loans', 'cards', 'config-server', 'customers'
 

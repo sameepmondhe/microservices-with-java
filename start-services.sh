@@ -125,7 +125,7 @@ stop_local_service 8888 "config-server"
 stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
-stop_container "customer-service"
+stop_container "customers-service"
 log_success "Cleanup complete."
 
 # Step 2: Start config-server locally
@@ -142,8 +142,8 @@ wait_for_service "loans" 8082
 build_and_run_service "cards" 8083
 wait_for_service "cards" 8083
 
-build_and_run_service "customer" 8084
-wait_for_service "customer" 8084
+build_and_run_service "customers" 8084
+wait_for_service "customers" 8084
 
 # Final Summary
 echo -e "\n🎉 All services started successfully!"
@@ -152,4 +152,4 @@ echo "
   - 💰 Accounts:      http://localhost:8081
   - 💳 Cards:         http://localhost:8083
   - 🏦 Loans:         http://localhost:8082
-  - 👥 Customer:      http://localhost:8084"
+  - 👥 Customers:      http://localhost:8084"
