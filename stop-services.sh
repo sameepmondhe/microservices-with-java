@@ -36,9 +36,10 @@ stop_local_service 8888 "config-server"
 
 # Stop Docker containers
 echo -e "\n🛑 Stopping microservices running in Docker containers..."
+stop_container "eureka-server-service"
 stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
-stop_container "customer-service"
+stop_container "customers-service"
 
 echo -e "\n🎉 All services have been stopped!"

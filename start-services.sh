@@ -122,6 +122,7 @@ fi
 # Step 1: Cleanup
 log_step "Stopping any existing services..."
 stop_local_service 8888 "config-server"
+stop_container "eureka-server-service"
 stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
@@ -132,7 +133,12 @@ log_success "Cleanup complete."
 start_local_service "config-server" 8888
 sleep 5  # Give it time to fully initialize
 
-# Step 3: Start services in Docker
+# Step 3: Start Eureka server in Docker
+build_and_run_service "eureka-server" 8761
+wait_for_service "eureka-server" 8761
+sleep 5  # Give Eureka time to fully initialize
+
+# Step 4: Start other services in Docker
 build_and_run_service "accounts" 8081
 wait_for_service "accounts" 8081
 
@@ -149,6 +155,7 @@ wait_for_service "customers" 8084
 echo -e "\n🎉 All services started successfully!"
 echo "
   - 🛠  Config Server: http://localhost:8888
+  - 🌐 Eureka Server:  http://localhost:8761
   - 💰 Accounts:      http://localhost:8081
   - 💳 Cards:         http://localhost:8083
   - 🏦 Loans:         http://localhost:8082
