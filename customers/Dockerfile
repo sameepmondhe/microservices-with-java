@@ -3,4 +3,5 @@ FROM eclipse-temurin:21-jre
 ARG JAR_FILE=build/libs/*.jar
 COPY ${JAR_FILE} app.jar
 
-ENTRYPOINT ["java", "-jar", "/app.jar"]
+# Add JVM tuning parameters
+ENTRYPOINT ["java", "-XX:+UseContainerSupport", "-XX:MaxRAMPercentage=75.0", "-Djava.security.egd=file:/dev/./urandom", "-jar", "/app.jar"]

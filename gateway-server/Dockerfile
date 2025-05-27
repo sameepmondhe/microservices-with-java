@@ -1,9 +1,8 @@
-FROM eclipse-temurin:17-jre
+FROM eclipse-temurin:21-jre
 
-# Copy configs from the project root into the image
-COPY configs/ /workspace/configs/
+LABEL maintainer="example.com"
 
-ARG JAR_FILE=config-server/build/libs/*.jar
+ARG JAR_FILE=build/libs/*.jar
 COPY ${JAR_FILE} app.jar
 
 # Add JVM tuning parameters

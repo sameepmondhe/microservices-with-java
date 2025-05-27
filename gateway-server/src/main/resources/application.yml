@@ -1,0 +1,53 @@
+spring:
+  application:
+    name: gateway-server
+  config:
+    import: optional:configserver:http://host.docker.internal:8888
+  cloud:
+    gateway:
+      discovery:
+        locator:
+          enabled: true
+          lowerCaseServiceId: true
+      routes:
+        - id: accounts-service
+          uri: lb://ACCOUNTS
+          predicates:
+            - Path=/accounts/**
+        - id: loans-service
+          uri: lb://LOANS
+          predicates:
+            - Path=/loans/**
+        - id: cards-service
+          uri: lb://CARDS
+          predicates:
+            - Path=/cards/**
+        - id: customers-service
+          uri: lb://CUSTOMERS
+          predicates:
+            - Path=/customers/**
+
+server:
+  port: 8072
+
+eureka:
+  client:
+    register-with-eureka: true
+    fetch-registry: true
+    service-url:
+      defaultZone: http://host.docker.internal:8761/eureka/
+  instance:
+    prefer-ip-address: true
+
+management:
+  endpoint:
+    health:
+      probes:
+        enabled: true
+      show-details: always
+    shutdown:
+      enabled: true
+  endpoints:
+    web:
+      exposure:
+        include: health,info,refresh,health-readiness,health-liveness,shutdown

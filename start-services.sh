@@ -127,6 +127,7 @@ stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
 stop_container "customers-service"
+stop_container "gateway-server-service"
 log_success "Cleanup complete."
 
 # Step 2: Start config-server locally
@@ -151,6 +152,10 @@ wait_for_service "cards" 8083
 build_and_run_service "customers" 8084
 wait_for_service "customers" 8084
 
+# Step 5: Start Gateway Server in Docker
+build_and_run_service "gateway-server" 8072
+wait_for_service "gateway-server" 8072
+
 # Final Summary
 echo -e "\n🎉 All services started successfully!"
 echo "
@@ -159,4 +164,5 @@ echo "
   - 💰 Accounts:      http://localhost:8081
   - 💳 Cards:         http://localhost:8083
   - 🏦 Loans:         http://localhost:8082
-  - 👥 Customers:      http://localhost:8084"
+  - 👥 Customers:      http://localhost:8084
+  - 🚪 Gateway:        http://localhost:8072"

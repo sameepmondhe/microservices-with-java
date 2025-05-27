@@ -41,5 +41,6 @@ stop_container "accounts-service"
 stop_container "cards-service"
 stop_container "loans-service"
 stop_container "customers-service"
+stop_container "gateway-server-service"
 
 echo -e "\n🎉 All services have been stopped!"
