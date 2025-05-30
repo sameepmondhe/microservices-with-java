@@ -12,19 +12,18 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/api/customers")
 public class CustomerController {
 
     @Autowired
     private CustomerService customerService;
 
-    @PostMapping
+    @PostMapping("/create")
     public ResponseEntity<Customer> createCustomer(@Valid @RequestBody Customer customer) {
         Customer createdCustomer = customerService.createCustomer(customer);
         return new ResponseEntity<>(createdCustomer, HttpStatus.CREATED);
     }
 
-    @GetMapping
+    @GetMapping("/getAll")
     public ResponseEntity<List<Customer>> getAllCustomers() {
         List<Customer> customers = customerService.getAllCustomers();
         return new ResponseEntity<>(customers, HttpStatus.OK);

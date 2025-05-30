@@ -166,3 +166,6 @@ echo "
   - 🏦 Loans:         http://localhost:8082
   - 👥 Customers:      http://localhost:8084
   - 🚪 Gateway:        http://localhost:8072"
+
+echo -e "\n🧪 To run API tests, execute: ./run-api-tests.sh"
+echo -e "🌟 Deployment complete! Your microservices environment is ready."

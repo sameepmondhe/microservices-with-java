@@ -5,7 +5,6 @@ import org.springframework.web.bind.annotation.*;
 import java.util.List;
 
 @RestController
-@RequestMapping("/loans")
 public class LoansController {
 
     @GetMapping("/getAll")

@@ -1,0 +1,12 @@
+{
+  "id": "local-test-env",
+  "name": "Local Testing Environment",
+  "values": [
+    {
+      "key": "gateway_url",
+      "value": "http://localhost:8072",
+      "type": "default",
+      "enabled": true
+    }
+  ]
+}

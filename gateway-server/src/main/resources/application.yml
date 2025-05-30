@@ -14,18 +14,28 @@ spring:
           uri: lb://ACCOUNTS
           predicates:
             - Path=/accounts/**
+
         - id: loans-service
           uri: lb://LOANS
           predicates:
             - Path=/loans/**
+
         - id: cards-service
           uri: lb://CARDS
           predicates:
             - Path=/cards/**
+
         - id: customers-service
           uri: lb://CUSTOMERS
           predicates:
             - Path=/customers/**
+
+        - id: gateway-server-routes
+          uri: lb://GATEWAY-SERVER
+          predicates:
+            - Path=/gateway/**
+          filters:
+            - RewritePath=/gateway(?<segment>/?.*), $\{segment}
 
 server:
   port: 8072
@@ -47,7 +57,9 @@ management:
       show-details: always
     shutdown:
       enabled: true
+    gateway:
+      enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,refresh,health-readiness,health-liveness,shutdown
+        include: health,info,refresh,health-readiness,health-liveness,shutdown,gateway

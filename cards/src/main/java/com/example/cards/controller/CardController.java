@@ -8,7 +8,6 @@ import java.util.List;
 import java.util.Optional;
 
 @RestController
-@RequestMapping("/cards")
 public class CardController {
     @Autowired
     private CardService cardService;

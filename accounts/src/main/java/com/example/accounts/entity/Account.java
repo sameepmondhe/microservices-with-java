@@ -9,7 +9,7 @@ import jakarta.validation.constraints.NotNull;
 import java.lang.annotation.Documented;
 
 @Data
-@Document(collation = "account")
+@Document(collection = "account")
 public class Account {
 
     @Id

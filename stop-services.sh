@@ -8,13 +8,43 @@ echo "🔄 Stopping all microservices..."
 stop_local_service() {
   local port=$1
   local name=$2
-  local pid=$(lsof -ti:$port || true)
-  if [[ -n "$pid" ]]; then
-    echo "  - Stopping $name on port $port (PID: $pid)..."
-    kill "$pid" 2>/dev/null || true
-    echo "    ✅ $name stopped"
+  local pids=($(lsof -ti:$port || true))
+
+  if [[ ${#pids[@]} -gt 0 ]]; then
+    echo "  - Found ${#pids[@]} process(es) on port $port:"
+
+    # List the processes with more details
+    echo "    Process details:"
+    lsof -i:$port
+
+    # Try to stop each process
+    for pid in "${pids[@]}"; do
+      echo "  - Stopping process $pid on port $port..."
+
+      # First try graceful termination
+      kill "$pid" 2>/dev/null || true
+
+      # Give it a moment to terminate
+      sleep 2
+
+      # Check if it's still running
+      if ps -p "$pid" > /dev/null 2>&1; then
+        echo "    ⚠️ Process $pid still running, forcing termination..."
+        kill -9 "$pid" 2>/dev/null || true
+        sleep 1
+      fi
+    done
+
+    # Verify port is actually free
+    if lsof -ti:$port > /dev/null 2>&1; then
+      echo "    ❌ Failed to free port $port. You may need to manually kill the process."
+      echo "       Try running: sudo lsof -i :$port"
+      echo "       Then: sudo kill -9 <PID>"
+    else
+      echo "    ✅ All processes on port $port stopped and port is free"
+    fi
   else
-    echo "  - $name was not running on port $port"
+    echo "  - No processes found running on port $port"
   fi
 }
 
