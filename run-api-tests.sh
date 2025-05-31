@@ -86,10 +86,6 @@ run_postman_tests() {
   echo "Environment: $environment_path"
   echo "Report will be saved to: $report_path"
 
-  # Debug file existence
-  ls -la "$collection_path" || log_error "Collection file not accessible"
-  ls -la "$environment_path" || log_error "Environment file not accessible"
-
   # Run the tests with absolute paths
   newman run "$collection_path" -e "$environment_path" --reporters cli,htmlextra --reporter-htmlextra-export "$report_path"
 
@@ -115,35 +111,25 @@ main() {
   # Step 2: Check for Newman installation
   check_and_install_newman || exit 1
 
-  # Step 3: Use the existing environment file directly
-  env_file="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/postman-collections/local-environment.json"
+  # Step 3: Define paths for collection and environment files
+  local env_file="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/postman-collections/local-environment.json"
+  local collection_path="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/postman-collections/banking-microservices-fixed-final.postman_collection.json"
 
+  # Step 4: Verify files exist
   if [ ! -f "$env_file" ]; then
     log_error "Environment file not found at: $env_file"
     exit 1
   fi
 
-  log_success "Using environment file: $env_file"
-
-  # Step 4: Run tests with the ordered collection file (which includes cleanup)
-  collection_path="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/postman-collections/banking-microservices-ordered.postman_collection.json"
-
   if [ ! -f "$collection_path" ]; then
-    log_warn "Ordered collection not found, trying fixed collection..."
-    collection_path="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/postman-collections/banking-microservices-fixed.postman_collection.json"
-  fi
-
-  if [ ! -f "$collection_path" ]; then
-    log_warn "Fixed collection not found, trying original collection..."
-    collection_path="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/postman-collections/banking-microservices.postman_collection.json"
-  fi
-
-  if [ ! -f "$collection_path" ]; then
-    log_error "No valid Postman collection found."
+    log_error "Postman collection file not found at: $collection_path"
     exit 1
   fi
 
+  log_success "Using environment file: $env_file"
   log_success "Using collection file: $collection_path"
+
+  # Step 5: Run the tests
   run_postman_tests "$collection_path" "$env_file"
   exit_code=$?
 

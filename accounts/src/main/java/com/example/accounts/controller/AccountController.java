@@ -4,12 +4,11 @@ import com.example.accounts.entity.Account;
 import com.example.accounts.service.AccountService;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.http.ResponseEntity;
-import org.springframework.stereotype.Controller;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
 
-@Controller
+@RestController
 public class AccountController {
 
     @Autowired
