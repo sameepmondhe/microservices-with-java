@@ -76,11 +76,14 @@ stop_container "gateway-server-service"
 # Stop observability stack using docker-compose
 echo -e "\n🛑 Stopping observability stack..."
 if command -v docker-compose &> /dev/null; then
-  echo "  - Using docker-compose to stop observability services (loki, promtail, grafana)..."
+  echo "  - Using docker-compose to stop observability services (prometheus, node-exporter, cadvisor, loki, promtail, grafana)..."
   docker-compose down 2>/dev/null || echo "  ⚠️ Warning: docker-compose command failed, containers may still be running"
   echo "    ✅ Observability stack stopped"
 else
   # Fallback to individual container stop if docker-compose is not available
+  stop_container "prometheus"
+  stop_container "node-exporter"
+  stop_container "cadvisor"
   stop_container "grafana"
   stop_container "promtail"
   stop_container "loki"

@@ -123,6 +123,73 @@ services:
     networks:
       - msnet
 
+  # Prometheus - Metrics collection
+  prometheus:
+    image: prom/prometheus:v2.45.0
+    container_name: prometheus
+    ports:
+      - "9090:9090"
+    volumes:
+      - ./prometheus/prometheus.yml:/etc/prometheus/prometheus.yml
+      - prometheus-data:/prometheus
+    command:
+      - '--config.file=/etc/prometheus/prometheus.yml'
+      - '--storage.tsdb.path=/prometheus'
+      - '--web.console.libraries=/etc/prometheus/console_libraries'
+      - '--web.console.templates=/etc/prometheus/consoles'
+      - '--web.enable-lifecycle'
+    depends_on:
+      - cadvisor
+    networks:
+      - msnet
+    restart: always
+
+  # Node Exporter - Host metrics
+  node-exporter:
+    image: prom/node-exporter:v1.6.0
+    container_name: node-exporter
+    ports:
+      - "9100:9100"
+    command:
+      - '--path.procfs=/host/proc'
+      - '--path.sysfs=/host/sys'
+      - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+    volumes:
+      - /proc:/host/proc:ro
+      - /sys:/host/sys:ro
+      - /:/rootfs:ro
+    networks:
+      - msnet
+    restart: always
+
+  # cAdvisor - Container metrics
+  cadvisor:
+    image: gcr.io/cadvisor/cadvisor:v0.47.0
+    container_name: cadvisor
+    ports:
+      - "8080:8080"
+    volumes:
+      # Remove mounting the entire root filesystem which causes issues on macOS
+      # Use more targeted mounts instead
+      - /var/run:/var/run:ro
+      - /sys:/sys:ro
+      - /var/lib/docker/:/var/lib/docker:ro
+    environment:
+      # Disable problematic collectors on macOS
+      - CADVISOR_STORAGE_DRIVER=
+      - CADVISOR_HOUSEKEEPING_INTERVAL=10s
+    command:
+      - --disable_metrics=disk,diskIO,network,tcp,udp
+      - --docker_only=true
+      - --store_container_labels=false
+      - --allow_dynamic_housekeeping=true
+      - --housekeeping_interval=10s
+      - --disable_root_cgroup_stats=true
+    networks:
+      - msnet
+    restart: always
+    privileged: true
+
   # Grafana - Visualization platform
   grafana:
     image: grafana/grafana:10.0.3
@@ -154,4 +221,4 @@ networks:
 
 volumes:
   grafana-storage:
-
+  prometheus-data:

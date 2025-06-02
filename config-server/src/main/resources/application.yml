@@ -19,14 +19,20 @@ management:
     health:
       probes:
         enabled: true
+      show-details: always
+    prometheus:
+      enabled: true
   endpoints:
     web:
       exposure:
-        include: refresh,health,info,health-readiness,health-liveness
+        include: '*'
+  metrics:
+    export:
+      prometheus:
+        enabled: true
   health:
     readiness:
       enabled: true
     liveness:
       enabled: true
-
 

@@ -178,9 +178,9 @@ wait_for_service "customers" 8084
 build_and_run_service "gateway-server" 8072
 wait_for_service "gateway-server" 8072
 
-# Step 6: Start Loki, Promtail, and Grafana services
-log_step "Starting observability stack (Loki, Promtail, Grafana)..."
-start_docker_compose_services "loki promtail grafana"
+# Step 6: Start Loki, Promtail, Grafana, Prometheus, Node Exporter, and cAdvisor services
+log_step "Starting observability stack (Prometheus, Grafana, Loki, etc)..."
+start_docker_compose_services "prometheus node-exporter cadvisor loki promtail grafana"
 
 # Wait for Grafana to be ready
 log_step "Waiting for Grafana to be ready..."
@@ -193,7 +193,7 @@ while [[ $grafana_retries -gt 0 ]]; do
     break
   fi
 
-  grafana_retries=$((grafana_retries - 1))
+  grafana_retries=$((grafana_retries -1))
   sleep 2
   echo -n "."
 done

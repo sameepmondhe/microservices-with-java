@@ -52,14 +52,21 @@ eureka:
 management:
   endpoint:
     health:
+      show-details: always
       probes:
         enabled: true
-      show-details: always
-    shutdown:
-      enabled: true
-    gateway:
+    prometheus:
       enabled: true
   endpoints:
     web:
       exposure:
-        include: health,info,refresh,health-readiness,health-liveness,shutdown,gateway
+        include: '*'
+  metrics:
+    export:
+      prometheus:
+        enabled: true
+  health:
+    readiness:
+      enabled: true
+    liveness:
+      enabled: true
