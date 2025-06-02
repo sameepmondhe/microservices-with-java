@@ -1,0 +1,207 @@
+{
+  "annotations": {
+    "list": [
+      {
+        "builtIn": 1,
+        "datasource": "-- Grafana --",
+        "enable": true,
+        "hide": true,
+        "iconColor": "rgba(0, 211, 255, 1)",
+        "name": "Annotations & Alerts",
+        "type": "dashboard"
+      }
+    ]
+  },
+  "editable": true,
+  "fiscalYearStartMonth": 0,
+  "graphTooltip": 0,
+  "id": null,
+  "links": [],
+  "liveNow": false,
+  "panels": [
+    {
+      "datasource": "Loki",
+      "fieldConfig": {
+        "defaults": {},
+        "overrides": []
+      },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 0 },
+      "id": 1,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "sum(count_over_time({filename=~\"/var/log/.*.log\"} [1m])) by (filename)",
+          "legendFormat": "{{filename}}",
+          "queryType": "range"
+        }
+      ],
+      "title": "Log Volume by Service (per minute)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 8 },
+      "id": 2,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        {
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "{filename=~\"/var/log/.*.log\"} |~ \"ERROR|WARN\"",
+          "queryType": "range"
+        }
+      ],
+      "title": "Recent Errors & Warnings (All Services)",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 16 },
+      "id": 3,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        { "datasource": "Loki", "editorMode": "code", "expr": "{filename=\"/var/log/accounts.log\"}", "queryType": "range" }
+      ],
+      "title": "Accounts Service Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 16 },
+      "id": 4,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        { "datasource": "Loki", "editorMode": "code", "expr": "{filename=\"/var/log/cards.log\"}", "queryType": "range" }
+      ],
+      "title": "Cards Service Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 8, "w": 12, "x": 0, "y": 24 },
+      "id": 5,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        { "datasource": "Loki", "editorMode": "code", "expr": "{filename=\"/var/log/loans.log\"}", "queryType": "range" }
+      ],
+      "title": "Loans Service Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "gridPos": { "h": 8, "w": 12, "x": 12, "y": 24 },
+      "id": 6,
+      "options": {
+        "dedupStrategy": "none",
+        "enableLogDetails": true,
+        "prettifyLogMessage": false,
+        "showCommonLabels": false,
+        "showLabels": false,
+        "showTime": true,
+        "sortOrder": "Descending",
+        "wrapLogMessage": false
+      },
+      "targets": [
+        { "datasource": "Loki", "editorMode": "code", "expr": "{filename=\"/var/log/customers.log\"}", "queryType": "range" }
+      ],
+      "title": "Customers Service Logs",
+      "type": "logs"
+    },
+    {
+      "datasource": "Loki",
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 32 },
+      "id": 7,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "topk(5, count_over_time({filename=~\"/var/log/.*.log\"} |= \"ERROR\" [1h])) by (filename)",
+          "legendFormat": "{{filename}}",
+          "queryType": "range"
+        }
+      ],
+      "title": "Top 5 Error Counts by Service (Last 1h)",
+      "type": "timeseries"
+    },
+    {
+      "datasource": "Loki",
+      "fieldConfig": { "defaults": {}, "overrides": [] },
+      "gridPos": { "h": 8, "w": 24, "x": 0, "y": 40 },
+      "id": 8,
+      "options": {
+        "legend": { "displayMode": "table", "placement": "bottom", "showLegend": true },
+        "tooltip": { "mode": "single", "sort": "none" }
+      },
+      "targets": [
+        {
+          "datasource": "Loki",
+          "editorMode": "code",
+          "expr": "sum by (level) (count_over_time({filename=~\"/var/log/.*.log\"} [1h]))",
+          "legendFormat": "{{level}}",
+          "queryType": "range"
+        }
+      ],
+      "title": "Log Level Distribution (Last 1h)",
+      "type": "timeseries"
+    }
+  ],
+  "refresh": "5s",
+  "schemaVersion": 38,
+  "style": "dark",
+  "tags": ["microservices", "logs", "loki"],
+  "templating": { "list": [] },
+  "time": { "from": "now-1h", "to": "now" },
+  "timepicker": {},
+  "timezone": "",
+  "title": "Advanced Microservices Logs",
+  "uid": "advanced-ms-logs",
+  "version": 1,
+  "weekStart": ""
+}
+

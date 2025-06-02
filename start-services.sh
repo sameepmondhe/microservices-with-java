@@ -3,7 +3,7 @@
 clear
 set -e
 
-DEBUG=false  # Set to true for verbose logs
+DEBUG=true  # Set to true for verbose logs
 
 # Logging helpers
 log_step() {
@@ -106,6 +106,28 @@ start_local_service() {
   wait_for_service "$service_name" "$port"
 }
 
+# Function to start Docker Compose services
+start_docker_compose_services() {
+  local services=$1
+
+  log_step "Starting observability services with Docker Compose..."
+
+  if [[ "$DEBUG" == "true" ]]; then
+    docker-compose up -d $services
+  else
+    docker-compose up -d $services > /dev/null 2>&1
+  fi
+
+  if [ $? -eq 0 ]; then
+    log_success "Observability services started successfully."
+    return 0
+  else
+    log_error "Failed to start observability services with Docker Compose."
+    log_error "Try running 'docker-compose up -d loki promtail grafana' manually to see detailed errors."
+    return 1
+  fi
+}
+
 # ─────────────────────────────────────────────────────────────
 
 echo -e "\n🔄 Starting microservices deployment..."
@@ -156,6 +178,30 @@ wait_for_service "customers" 8084
 build_and_run_service "gateway-server" 8072
 wait_for_service "gateway-server" 8072
 
+# Step 6: Start Loki, Promtail, and Grafana services
+log_step "Starting observability stack (Loki, Promtail, Grafana)..."
+start_docker_compose_services "loki promtail grafana"
+
+# Wait for Grafana to be ready
+log_step "Waiting for Grafana to be ready..."
+grafana_retries=15
+while [[ $grafana_retries -gt 0 ]]; do
+  response=$(curl -s -o /dev/null -w "%{http_code}" http://localhost:3000/api/health || echo "")
+
+  if [[ "$response" == "200" ]]; then
+    log_success "Grafana is ready."
+    break
+  fi
+
+  grafana_retries=$((grafana_retries - 1))
+  sleep 2
+  echo -n "."
+done
+
+if [[ $grafana_retries -eq 0 ]]; then
+  log_error "Grafana did not become ready in time, but continuing..."
+fi
+
 # Final Summary
 echo -e "\n🎉 All services started successfully!"
 echo "
@@ -165,7 +211,15 @@ echo "
   - 💳 Cards:         http://localhost:8083
   - 🏦 Loans:         http://localhost:8082
   - 👥 Customers:      http://localhost:8084
-  - 🚪 Gateway:        http://localhost:8072"
+  - 🚪 Gateway:        http://localhost:8072
+  - 📊 Grafana:        http://localhost:3000 (admin/admin123)
+  - 📝 Loki:           http://localhost:3100"
+
+echo -e "\n📈 To access the Grafana dashboard:"
+echo "   1. Open http://localhost:3000 in your browser"
+echo "   2. Login with username: admin, password: admin123"
+echo "   3. Navigate to Dashboards > Microservices > Microservices Dashboard"
+echo "   4. You can now monitor logs from all your microservices"
 
 echo -e "\n🧪 To run API tests, execute: ./run-api-tests.sh"
 echo -e "🌟 Deployment complete! Your microservices environment is ready."

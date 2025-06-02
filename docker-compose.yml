@@ -93,6 +93,65 @@ services:
     networks:
       - msnet
 
+  # Loki - Log aggregation system
+  loki:
+    image: grafana/loki:2.8.3
+    container_name: loki
+    ports:
+      - "3100:3100"
+    command: -config.file=/etc/loki/local-config.yaml -log.level=warn
+    environment:
+      - JAEGER_AGENT_HOST=jaeger
+      - LOKI_LOG_LEVEL=warn
+    networks:
+      - msnet
+
+  # Promtail - Log collector for Loki
+  promtail:
+    image: grafana/promtail:2.8.3
+    container_name: promtail
+    volumes:
+      - ./promtail-config.yaml:/etc/promtail/config.yml
+      # Mount specific log files directly
+      - ./accounts.log:/var/log/accounts.log:ro
+      - ./cards.log:/var/log/cards.log:ro
+      - ./loans.log:/var/log/loans.log:ro
+      - ./customers.log:/var/log/customers.log:ro
+    command: -config.file=/etc/promtail/config.yml
+    depends_on:
+      - loki
+    networks:
+      - msnet
+
+  # Grafana - Visualization platform
+  grafana:
+    image: grafana/grafana:10.0.3
+    container_name: grafana
+    ports:
+      - "3000:3000"
+    environment:
+      - GF_SECURITY_ADMIN_USER=admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin123
+      - GF_USERS_ALLOW_SIGN_UP=false
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      # Use simpler volume mounts that will work on most environments
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
+    depends_on:
+      - loki
+    networks:
+      - msnet
+    healthcheck:
+      test: ["CMD", "wget", "-q", "--spider", "http://localhost:3000/api/health"]
+      interval: 30s
+      timeout: 10s
+      retries: 5
+
 networks:
   msnet:
     driver: bridge
+
+volumes:
+  grafana-storage:
+

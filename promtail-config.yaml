@@ -1,0 +1,56 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+scrape_configs:
+  # For all log files in the root directory
+  - job_name: microservices_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          __path__: /var/log/*.log
+
+  # Specific microservices logs with proper service labels
+  - job_name: accounts_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: accounts
+          __path__: /var/log/accounts.log
+
+  - job_name: cards_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: cards
+          __path__: /var/log/cards.log
+
+  - job_name: loans_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: loans
+          __path__: /var/log/loans.log
+
+  - job_name: customers_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: customer
+          __path__: /var/log/customers.log
