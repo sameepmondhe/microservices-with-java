@@ -113,9 +113,9 @@ start_docker_compose_services() {
   log_step "Starting observability services with Docker Compose..."
 
   if [[ "$DEBUG" == "true" ]]; then
-    docker-compose up -d $services
+    docker-compose up -d --remove-orphans $services
   else
-    docker-compose up -d $services > /dev/null 2>&1
+    docker-compose up -d --remove-orphans $services > /dev/null 2>&1
   fi
 
   if [ $? -eq 0 ]; then
@@ -150,6 +150,18 @@ stop_container "cards-service"
 stop_container "loans-service"
 stop_container "customers-service"
 stop_container "gateway-server-service"
+
+# Stop observability stack pods if running
+log_step "Stopping any running observability stack pods..."
+
+# Use the cleanup script to ensure all observability containers are properly removed
+chmod +x ./cleanup-containers.sh
+./cleanup-containers.sh | while read -r line; do
+  log_debug "$line"
+done
+
+log_success "Observability stack pods stopped."
+
 log_success "Cleanup complete."
 
 # Step 2: Start config-server locally
@@ -223,3 +235,4 @@ echo "   4. You can now monitor logs from all your microservices"
 
 echo -e "\n🧪 To run API tests, execute: ./run-api-tests.sh"
 echo -e "🌟 Deployment complete! Your microservices environment is ready."
+

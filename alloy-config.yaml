@@ -1,0 +1,175 @@
+# Alloy configuration for microservices logging
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki:3100/loki/api/v1/push
+
+# Scrape configurations for log collection
+scrape_configs:
+  # General microservices logs collection
+  - job_name: microservices_logs
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          __path__: /var/log/*.log
+
+  # Service-specific log collection with enriched metadata
+  - job_name: accounts_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: accounts
+          environment: ${ENV:-production}
+          __path__: /var/log/accounts.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            traceId: traceId
+            spanId: spanId
+      - labels:
+          level:
+          traceId:
+          spanId:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+  - job_name: cards_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: cards
+          environment: ${ENV:-production}
+          __path__: /var/log/cards.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            traceId: traceId
+            spanId: spanId
+      - labels:
+          level:
+          traceId:
+          spanId:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+  - job_name: loans_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: loans
+          environment: ${ENV:-production}
+          __path__: /var/log/loans.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            traceId: traceId
+            spanId: spanId
+      - labels:
+          level:
+          traceId:
+          spanId:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+  - job_name: customers_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: customers
+          environment: ${ENV:-production}
+          __path__: /var/log/customers.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            traceId: traceId
+            spanId: spanId
+      - labels:
+          level:
+          traceId:
+          spanId:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+  # Add config-server logs
+  - job_name: config_server
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: config-server
+          environment: ${ENV:-production}
+          __path__: /var/log/config-server.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            traceId: traceId
+            spanId: spanId
+      - labels:
+          level:
+          traceId:
+          spanId:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+
+  # Add gateway-server logs
+  - job_name: gateway_service
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          service: gateway-server
+          environment: ${ENV:-production}
+          __path__: /var/log/gateway-server.log
+    pipeline_stages:
+      - json:
+          expressions:
+            level: level
+            message: message
+            timestamp: timestamp
+            traceId: traceId
+            spanId: spanId
+      - labels:
+          level:
+          traceId:
+          spanId:
+      - timestamp:
+          source: timestamp
+          format: RFC3339Nano
+

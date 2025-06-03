@@ -9,15 +9,7 @@ clients:
   - url: http://loki:3100/loki/api/v1/push
 
 scrape_configs:
-  # For all log files in the root directory
-  - job_name: microservices_logs
-    static_configs:
-      - targets:
-          - localhost
-        labels:
-          job: microservices
-          __path__: /var/log/*.log
-
+  # Removed wildcard log path to avoid unintended log collection
   # Specific microservices logs with proper service labels
   - job_name: accounts_service
     static_configs:
@@ -52,5 +44,5 @@ scrape_configs:
           - localhost
         labels:
           job: microservices
-          service: customer
+          service: customers
           __path__: /var/log/customers.log

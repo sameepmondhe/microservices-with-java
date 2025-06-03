@@ -1,5 +1,3 @@
-version: '3.8'
-
 services:
   # config-server:
   #   build:
@@ -112,16 +110,16 @@ services:
     container_name: promtail
     volumes:
       - ./promtail-config.yaml:/etc/promtail/config.yml
-      # Mount specific log files directly
       - ./accounts.log:/var/log/accounts.log:ro
       - ./cards.log:/var/log/cards.log:ro
       - ./loans.log:/var/log/loans.log:ro
       - ./customers.log:/var/log/customers.log:ro
+      - ./config-server.log:/var/log/config-server.log:ro
     command: -config.file=/etc/promtail/config.yml
-    depends_on:
-      - loki
     networks:
       - msnet
+    depends_on:
+      - loki
 
   # Prometheus - Metrics collection
   prometheus:
@@ -154,6 +152,14 @@ services:
       - '--path.procfs=/host/proc'
       - '--path.sysfs=/host/sys'
       - '--collector.filesystem.mount-points-exclude=^/(sys|proc|dev|host|etc)($$|/)'
+      - '--no-collector.nfsd'  # Disable the problematic nfsd collector
+      - '--collector.disable-defaults'  # Disable defaults so we can carefully control what's enabled
+      - '--collector.cpu'  # Enable CPU collector
+      - '--collector.diskstats'  # Enable disk stats
+      - '--collector.meminfo'  # Enable memory info
+      - '--collector.loadavg'  # Enable load average
+      - '--collector.filesystem'  # Enable filesystem stats
+      - '--collector.netdev'  # Enable network device stats
     volumes:
       - /proc:/host/proc:ro
       - /sys:/host/sys:ro
@@ -169,22 +175,26 @@ services:
     ports:
       - "8080:8080"
     volumes:
-      # Remove mounting the entire root filesystem which causes issues on macOS
-      # Use more targeted mounts instead
+      # Minimal required mounts for macOS to prevent race conditions
       - /var/run:/var/run:ro
-      - /sys:/sys:ro
       - /var/lib/docker/:/var/lib/docker:ro
+      # Mount the container hints file to provide explicit configuration
+      - ./cadvisor-container-hints.json:/etc/cadvisor/container_hints.json:ro
     environment:
-      # Disable problematic collectors on macOS
       - CADVISOR_STORAGE_DRIVER=
-      - CADVISOR_HOUSEKEEPING_INTERVAL=10s
+      - CADVISOR_HOUSEKEEPING_INTERVAL=30s
     command:
       - --disable_metrics=disk,diskIO,network,tcp,udp
       - --docker_only=true
       - --store_container_labels=false
-      - --allow_dynamic_housekeeping=true
-      - --housekeeping_interval=10s
+      - --allow_dynamic_housekeeping=false
+      - --housekeeping_interval=30s
       - --disable_root_cgroup_stats=true
+      - --docker_only=true
+      - --max_housekeeping_interval=60s
+      - --event_storage_event_limit=0
+      - --event_storage_age_limit=0
+      - --container_hints=/etc/cadvisor/container_hints.json
     networks:
       - msnet
     restart: always
@@ -196,17 +206,16 @@ services:
     container_name: grafana
     ports:
       - "3000:3000"
+    volumes:
+      - grafana-storage:/var/lib/grafana
+      # Mount dashboards and provisioning configurations
+      - ./grafana/provisioning:/etc/grafana/provisioning:ro
+      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
     environment:
       - GF_SECURITY_ADMIN_USER=admin
       - GF_SECURITY_ADMIN_PASSWORD=admin123
       - GF_USERS_ALLOW_SIGN_UP=false
-    volumes:
-      - grafana-storage:/var/lib/grafana
-      # Use simpler volume mounts that will work on most environments
-      - ./grafana/provisioning:/etc/grafana/provisioning:ro
-      - ./grafana/dashboards:/var/lib/grafana/dashboards:ro
-    depends_on:
-      - loki
+      - GF_DASHBOARDS_DEFAULT_HOME_DASHBOARD_PATH=/var/lib/grafana/dashboards/system-metrics-fixed.json
     networks:
       - msnet
     healthcheck:
@@ -222,3 +231,4 @@ networks:
 volumes:
   grafana-storage:
   prometheus-data:
+

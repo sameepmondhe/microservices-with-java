@@ -1,6 +1,7 @@
 #!/bin/bash
 
-set -e
+# Removed 'set -e' to prevent the script from exiting on errors
+# Instead, we'll handle errors more gracefully
 
 echo "🔄 Stopping all microservices..."
 
@@ -52,7 +53,7 @@ stop_local_service() {
 stop_container() {
   local container_name=$1
   echo "  - Stopping container $container_name..."
-  if docker inspect "$container_name" &>/dev/null; then
+  if docker ps --format "{{.Names}}" | grep -E "$container_name" &>/dev/null; then
     docker rm -f "$container_name" 2>/dev/null || true
     echo "    ✅ $container_name stopped"
   else
@@ -62,31 +63,57 @@ stop_container() {
 
 # Stop config-server running locally
 echo "🛑 Stopping config-server..."
-stop_local_service 8888 "config-server"
+stop_local_service 8888 "config-server" || echo "  ⚠️ Failed to stop config-server, continuing..."
 
 # Stop Docker containers
 echo -e "\n🛑 Stopping microservices running in Docker containers..."
-stop_container "eureka-server-service"
-stop_container "accounts-service"
-stop_container "cards-service"
-stop_container "loans-service"
-stop_container "customers-service"
-stop_container "gateway-server-service"
+stop_container "eureka-server-service" || echo "  ⚠️ Failed to stop eureka-server-service, continuing..."
+stop_container "accounts-service" || echo "  ⚠️ Failed to stop accounts-service, continuing..."
+stop_container "cards-service" || echo "  ⚠️ Failed to stop cards-service, continuing..."
+stop_container "loans-service" || echo "  ⚠️ Failed to stop loans-service, continuing..."
+stop_container "customers-service" || echo "  ⚠️ Failed to stop customers-service, continuing..."
+stop_container "gateway-server-service" || echo "  ⚠️ Failed to stop gateway-server-service, continuing..."
 
 # Stop observability stack using docker-compose
 echo -e "\n🛑 Stopping observability stack..."
-if command -v docker-compose &> /dev/null; then
-  echo "  - Using docker-compose to stop observability services (prometheus, node-exporter, cadvisor, loki, promtail, grafana)..."
-  docker-compose down 2>/dev/null || echo "  ⚠️ Warning: docker-compose command failed, containers may still be running"
-  echo "    ✅ Observability stack stopped"
+# Try both docker compose (new) and docker-compose (legacy) commands with explicit file path
+if command -v docker &> /dev/null; then
+  COMPOSE_FILE="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/docker-compose.yml"
+
+  if [ -f "$COMPOSE_FILE" ]; then
+    echo "  - Using docker compose to stop observability services..."
+    # Try the new Docker Compose command first (no hyphen) with --remove-orphans flag
+    if docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null; then
+      echo "    ✅ Observability stack stopped via docker compose"
+    elif docker-compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null; then
+      echo "    ✅ Observability stack stopped via docker-compose (legacy)"
+    else
+      echo "  ⚠️ Warning: docker compose command failed, will try stopping individual containers"
+
+      # Force remove all observability containers specifically by name patterns
+      echo "  - Stopping individual observability containers..."
+
+      # Stop containers with exact names or with project prefixes
+      docker ps -a --format "{{.Names}}" | grep -E '(prometheus|node-exporter|cadvisor|grafana|loki|alloy|promtail)' 2>/dev/null | while read container; do
+        echo "    - Removing container: $container"
+        docker rm -f "$container" 2>/dev/null || true
+      done
+
+      echo "    ✅ Individual observability containers stopped"
+    fi
+  else
+    echo "  ⚠️ docker-compose.yml file not found at $COMPOSE_FILE"
+    # Fallback to individual container stop with more thorough search
+    echo "  - Stopping individual observability containers..."
+
+    # Stop containers with exact names or with project prefixes
+    docker ps -a --format "{{.Names}}" | grep -E '(prometheus|node-exporter|cadvisor|grafana|loki|alloy|promtail)' 2>/dev/null | while read container; do
+      echo "    - Removing container: $container"
+      docker rm -f "$container" 2>/dev/null || true
+    done
+  fi
 else
-  # Fallback to individual container stop if docker-compose is not available
-  stop_container "prometheus"
-  stop_container "node-exporter"
-  stop_container "cadvisor"
-  stop_container "grafana"
-  stop_container "promtail"
-  stop_container "loki"
+  echo "  ⚠️ Docker not found, cannot stop observability stack"
 fi
 
 echo -e "\n🎉 All services have been stopped!"

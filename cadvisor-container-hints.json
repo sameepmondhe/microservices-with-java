@@ -1,0 +1,8 @@
+{
+  "docker-containers": {
+    "/docker": {
+      "throttling_allowed": false
+    }
+  }
+}
+
