@@ -91,6 +91,23 @@ services:
     networks:
       - msnet
 
+  otel-collector:
+    image: otel/opentelemetry-collector:0.109.0
+    container_name: otel-collector
+    volumes:
+      - ./otel/collector-config.yaml:/etc/otelcol/config.yaml:ro
+    command: ["--config", "/etc/otelcol/config.yaml"]
+    ports:
+      - "4317:4317" # OTLP gRPC
+      - "4318:4318" # OTLP HTTP
+    healthcheck:
+      test: ["CMD", "wget", "-qO", "-", "http://localhost:13133/healthz"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+    networks:
+      - msnet
+
 
 networks:
   msnet:
