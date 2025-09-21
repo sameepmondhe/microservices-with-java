@@ -38,7 +38,8 @@ DOCKER_BUILD_ARGS="" # e.g. "--no-cache --build-arg SOME_FLAG=value"
 
 SERVICES_DOCKER_ORDER=( \
   "otel-collector:$OTEL_COLLECTOR_GRPC_PORT" \
-  "jaeger:16686" \
+  "tempo:3200" \
+  "grafana:3000" \
   "eureka-server:$EUREKA_PORT" \
   "accounts:$ACCOUNTS_PORT" \
   "loans:$LOANS_PORT" \
@@ -120,8 +121,8 @@ build_and_run_service() {
     log_success "Docker network created."
   fi
 
-  # Skip building for services that use pre-built images (only Jaeger)
-  if [[ "$service_name" == "jaeger" ]]; then
+  # Skip building for services that use pre-built images (only Grafana)
+  if [[ "$service_name" == "grafana" ]]; then
     log_step "Using pre-built image for $service_name (no build required)..."
   else
     log_step "Building Docker image for $service_name..."
@@ -145,8 +146,8 @@ build_and_run_service() {
   
   # Set image name based on service type
   local final_image_name="$image_name"
-  if [[ "$service_name" == "jaeger" ]]; then
-    final_image_name="jaegertracing/all-in-one:latest"
+  if [[ "$service_name" == "grafana" ]]; then
+    final_image_name="grafana/grafana:latest"
   fi
   
   # Configure port mappings based on service requirements
@@ -156,9 +157,13 @@ build_and_run_service() {
     docker_cmd+=(-p "${OTEL_COLLECTOR_GRPC_PORT}:4317")
     docker_cmd+=(-p "${OTEL_COLLECTOR_HTTP_PORT}:4318") 
     docker_cmd+=(-p "${OTEL_COLLECTOR_HEALTH_PORT}:13133")
-  elif [[ "$service_name" == "jaeger" ]]; then
-    docker_cmd+=(-p "16686:16686")  # Jaeger UI
-    docker_cmd+=(-p "14250:14250")  # Jaeger collector port for OTEL
+  elif [[ "$service_name" == "tempo" ]]; then
+    docker_cmd+=(-p "3200:3200")   # Tempo HTTP API
+    docker_cmd+=(-p "14317:4317")  # OTLP gRPC receiver (mapped to avoid conflict)
+    docker_cmd+=(-p "14318:4318")  # OTLP HTTP receiver (mapped to avoid conflict)
+  elif [[ "$service_name" == "grafana" ]]; then
+    docker_cmd+=(-p "3000:3000")   # Grafana UI
+    docker_cmd+=(-e "GF_SECURITY_ADMIN_PASSWORD=admin")
   else
     docker_cmd+=(-p "$port:$port")
   fi
@@ -210,6 +215,41 @@ wait_for_service() {
     # Show collector logs for debugging
     log_debug "Last 20 lines of otel-collector logs:"
     docker logs "${service_name}-service" 2>/dev/null | tail -n 20 | while read -r line; do log_debug "$line"; done
+    return 1
+  elif [[ "$service_name" == "tempo" ]]; then
+    # Tempo doesn't have a traditional health endpoint, check if OTLP port is responding
+    retries=20
+    delay=3
+    log_step "Waiting for Tempo service readiness (checking OTLP port)..."
+    while (( retries > 0 )); do
+      # Check if tempo is accepting connections on OTLP port
+      if timeout 5 bash -c "echo >/dev/tcp/localhost/14317" 2>/dev/null; then
+        log_success "Tempo is UP and accepting connections."
+        return 0
+      fi
+      retries=$((retries - 1))
+      sleep "$delay"
+      echo -n "."
+    done
+    echo ""
+    log_error "Tempo did not become accessible in time; proceeding anyway."
+    return 1
+  elif [[ "$service_name" == "grafana" ]]; then
+    health_url="http://localhost:3000/api/health"
+    retries=30
+    delay=2
+    log_step "Waiting for Grafana UI readiness (port 3000)..."
+    while (( retries > 0 )); do
+      if curl -fs "$health_url" >/dev/null 2>&1; then
+        log_success "Grafana UI is UP and accessible."
+        return 0
+      fi
+      retries=$((retries - 1))
+      sleep "$delay"
+      echo -n "."
+    done
+    echo ""
+    log_error "Grafana did not become accessible in time; proceeding anyway."
     return 1
   elif [[ "$service_name" == "jaeger" ]]; then
     health_url="http://localhost:16686/"
@@ -460,9 +500,10 @@ echo "
   - 👥 Customers:      http://localhost:$CUSTOMERS_PORT
   - 🚪 Gateway:        http://localhost:$GATEWAY_PORT
   - 📡 OTEL Collector: gRPC:${OTEL_COLLECTOR_GRPC_PORT} HTTP:${OTEL_COLLECTOR_HTTP_PORT} Health:${OTEL_COLLECTOR_HEALTH_PORT}
-  - 🔍 Jaeger UI:      http://localhost:16686"
+  - 🔍 Tempo API:      http://localhost:3200
+  - 📊 Grafana UI:     http://localhost:3000 (admin/admin)"
 
-echo -e "\n📈 Observability: Traces exporting via OTLP -> collector -> Jaeger. View traces at http://localhost:16686"
+echo -e "\n📈 Observability: Traces exporting via OTLP -> collector -> Tempo. View traces in Grafana at http://localhost:3000"
 
 echo -e "\n🧪 To run API tests, execute: ./run-api-tests.sh"
 echo -e "🌟 Deployment complete! Your microservices environment is ready."

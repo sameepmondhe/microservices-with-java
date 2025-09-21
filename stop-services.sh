@@ -84,6 +84,8 @@ stop_local_service 8888 "config-server" || echo "  ⚠️ Failed to stop config-
 # Stop Docker containers (no need to kill ports since they're containerized)
 echo -e "\n🛑 Stopping microservices running in Docker containers..."
 stop_container "otel-collector-service" || echo "  ⚠️ Failed to stop otel-collector-service, continuing..."
+stop_container "tempo-service" || echo "  ⚠️ Failed to stop tempo-service, continuing..."
+stop_container "grafana-service" || echo "  ⚠️ Failed to stop grafana-service, continuing..."
 stop_container "eureka-server-service" || echo "  ⚠️ Failed to stop eureka-server-service, continuing..."
 stop_container "accounts-service" || echo "  ⚠️ Failed to stop accounts-service, continuing..."
 stop_container "cards-service" || echo "  ⚠️ Failed to stop cards-service, continuing..."
