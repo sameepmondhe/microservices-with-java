@@ -44,3 +44,14 @@ config-server.log
 cards.log
 accounts.log
 customers.log
+customers/bin/main/application.yml
+customers/bin/main/com/example/customer/controller/BuildController.class
+customers/bin/main/com/example/customer/CustomerApplication.class
+customers/bin/main/com/example/customer/controller/CustomerController.class
+customers/bin/main/com/example/customer/entity/Customer.class
+customers/bin/main/com/example/customer/repository/CustomerRepository.class
+customers/bin/main/com/example/customer/service/CustomerService.class
+eureka-server/bin/main/application.yml
+eureka-server/bin/main/com/microservices/eurekaserver/EurekaServerApplication.class
+gateway-server/bin/main/application.yml
+gateway-server/bin/main/com/example/gateway/GatewayServerApplication.class
