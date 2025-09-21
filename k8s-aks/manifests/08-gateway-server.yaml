@@ -1,0 +1,81 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: gateway-server
+  namespace: banking-microservices
+  labels:
+    app: gateway-server
+    tier: gateway
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: gateway-server
+  template:
+    metadata:
+      labels:
+        app: gateway-server
+        tier: gateway
+    spec:
+      imagePullSecrets:
+        - name: acr-secret
+      containers:
+        - name: gateway-server
+          image: YOUR_ACR_LOGIN_SERVER/gateway-server:latest
+          ports:
+            - containerPort: 8072
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: CONFIG_SERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: CONFIG_SERVER_URL
+            - name: EUREKA_DEFAULT_ZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: EUREKA_DEFAULT_ZONE
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8072
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8072
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: gateway-server
+  namespace: banking-microservices
+  labels:
+    app: gateway-server
+spec:
+  type: LoadBalancer
+  ports:
+    - port: 80
+      targetPort: 8072
+      protocol: TCP
+      name: http
+  selector:
+    app: gateway-server

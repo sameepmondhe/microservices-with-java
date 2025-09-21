@@ -1,0 +1,101 @@
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: loans
+  namespace: banking-microservices
+  labels:
+    app: loans
+    tier: microservice
+spec:
+  replicas: 2
+  selector:
+    matchLabels:
+      app: loans
+  template:
+    metadata:
+      labels:
+        app: loans
+        tier: microservice
+    spec:
+      imagePullSecrets:
+        - name: acr-secret
+      containers:
+        - name: loans
+          image: YOUR_ACR_LOGIN_SERVER/loans:latest
+          ports:
+            - containerPort: 8083
+              name: http
+          env:
+            - name: SPRING_PROFILES_ACTIVE
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: SPRING_PROFILES_ACTIVE
+            - name: CONFIG_SERVER_URL
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: CONFIG_SERVER_URL
+            - name: EUREKA_DEFAULT_ZONE
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: EUREKA_DEFAULT_ZONE
+            - name: MONGODB_HOST
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: MONGODB_HOST
+            - name: MONGODB_PORT
+              valueFrom:
+                configMapKeyRef:
+                  name: microservices-config
+                  key: MONGODB_PORT
+            - name: MONGODB_USERNAME
+              valueFrom:
+                secretKeyRef:
+                  name: microservices-secrets
+                  key: MONGODB_USERNAME
+            - name: MONGODB_PASSWORD
+              valueFrom:
+                secretKeyRef:
+                  name: microservices-secrets
+                  key: MONGODB_PASSWORD
+          resources:
+            requests:
+              memory: "512Mi"
+              cpu: "250m"
+            limits:
+              memory: "1Gi"
+              cpu: "500m"
+          livenessProbe:
+            httpGet:
+              path: /actuator/health
+              port: 8083
+            initialDelaySeconds: 120
+            periodSeconds: 30
+            timeoutSeconds: 10
+          readinessProbe:
+            httpGet:
+              path: /actuator/health/readiness
+              port: 8083
+            initialDelaySeconds: 60
+            periodSeconds: 10
+            timeoutSeconds: 5
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: loans
+  namespace: banking-microservices
+  labels:
+    app: loans
+spec:
+  type: ClusterIP
+  ports:
+    - port: 8083
+      targetPort: 8083
+      protocol: TCP
+      name: http
+  selector:
+    app: loans

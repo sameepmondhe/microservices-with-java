@@ -74,46 +74,6 @@ stop_container "loans-service" || echo "  ⚠️ Failed to stop loans-service, c
 stop_container "customers-service" || echo "  ⚠️ Failed to stop customers-service, continuing..."
 stop_container "gateway-server-service" || echo "  ⚠️ Failed to stop gateway-server-service, continuing..."
 
-# Stop observability stack using docker-compose
-echo -e "\n🛑 Stopping observability stack..."
-# Try both docker compose (new) and docker-compose (legacy) commands with explicit file path
-if command -v docker &> /dev/null; then
-  COMPOSE_FILE="/Users/Sameep.Mondhe/learning/ms/microservices-with-java/docker-compose.yml"
-
-  if [ -f "$COMPOSE_FILE" ]; then
-    echo "  - Using docker compose to stop observability services..."
-    # Try the new Docker Compose command first (no hyphen) with --remove-orphans flag
-    if docker compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null; then
-      echo "    ✅ Observability stack stopped via docker compose"
-    elif docker-compose -f "$COMPOSE_FILE" down --remove-orphans 2>/dev/null; then
-      echo "    ✅ Observability stack stopped via docker-compose (legacy)"
-    else
-      echo "  ⚠️ Warning: docker compose command failed, will try stopping individual containers"
-
-      # Force remove all observability containers specifically by name patterns
-      echo "  - Stopping individual observability containers..."
-
-      # Stop containers with exact names or with project prefixes
-      docker ps -a --format "{{.Names}}" | grep -E '(prometheus|node-exporter|cadvisor|grafana|loki|alloy|promtail)' 2>/dev/null | while read container; do
-        echo "    - Removing container: $container"
-        docker rm -f "$container" 2>/dev/null || true
-      done
-
-      echo "    ✅ Individual observability containers stopped"
-    fi
-  else
-    echo "  ⚠️ docker-compose.yml file not found at $COMPOSE_FILE"
-    # Fallback to individual container stop with more thorough search
-    echo "  - Stopping individual observability containers..."
-
-    # Stop containers with exact names or with project prefixes
-    docker ps -a --format "{{.Names}}" | grep -E '(prometheus|node-exporter|cadvisor|grafana|loki|alloy|promtail)' 2>/dev/null | while read container; do
-      echo "    - Removing container: $container"
-      docker rm -f "$container" 2>/dev/null || true
-    done
-  fi
-else
-  echo "  ⚠️ Docker not found, cannot stop observability stack"
-fi
+echo -e "\nℹ️ Observability stack removal logic skipped (stack not in this baseline)."
 
 echo -e "\n🎉 All services have been stopped!"
