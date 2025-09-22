@@ -113,5 +113,3 @@ networks:
   msnet:
     driver: bridge
 
-volumes:
-

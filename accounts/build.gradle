@@ -34,6 +34,13 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus' // Added for Prometheus
     implementation 'org.springframework.cloud:spring-cloud-starter-netflix-eureka-client'
+    
+    // Inter-service communication
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    implementation 'org.springframework.cloud:spring-cloud-starter-loadbalancer'
+    
+    // Structured logging dependencies
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools:3.2.5'
 

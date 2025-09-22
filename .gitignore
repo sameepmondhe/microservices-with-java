@@ -55,3 +55,4 @@ eureka-server/bin/main/application.yml
 eureka-server/bin/main/com/microservices/eurekaserver/EurekaServerApplication.class
 gateway-server/bin/main/application.yml
 gateway-server/bin/main/com/example/gateway/GatewayServerApplication.class
+.vscode/settings.json

@@ -23,6 +23,9 @@ TEMPO_API_PORT=3200
 TEMPO_OTLP_GRPC_PORT=9317  # Different from OTEL collector
 TEMPO_OTLP_HTTP_PORT=9318  # Different from OTEL collector
 
+# Prometheus configuration
+PROMETHEUS_PORT=9090
+
 GRAFANA_PORT=3000
 
 # Function to start OTEL collector
@@ -140,6 +143,58 @@ wait_for_tempo() {
   return 1
 }
 
+# Function to start Prometheus
+start_prometheus() {
+  log_step "Starting Prometheus..."
+  
+  ensure_port_free "$PROMETHEUS_PORT" "prometheus"
+  stop_container "prometheus-service"
+  
+  log_step "Building Prometheus image..."
+  if (cd "$REPO_ROOT" && docker build -t prometheus-service:latest ./prometheus > /dev/null 2>&1); then
+    log_success "Prometheus image built."
+  else
+    log_error "Failed to build Prometheus image."
+    return 1
+  fi
+  
+  log_step "Starting Prometheus container..."
+  if docker run -d --name "prometheus-service" \
+      --network microservices-network \
+      -p "${PROMETHEUS_PORT}:9090" \
+      --add-host=host.docker.internal:host-gateway \
+      prometheus-service:latest > /dev/null; then
+    log_success "Prometheus container started."
+  else
+    log_error "Failed to start Prometheus container."
+    return 1
+  fi
+  
+  wait_for_prometheus
+}
+
+# Function to wait for Prometheus readiness
+wait_for_prometheus() {
+  local retries=20
+  local delay=3
+  log_step "Waiting for Prometheus readiness..."
+  
+  while (( retries > 0 )); do
+    if curl -fs "http://localhost:${PROMETHEUS_PORT}/-/ready" >/dev/null 2>&1; then
+      log_success "Prometheus is ready."
+      return 0
+    fi
+    retries=$((retries - 1))
+    sleep "$delay"
+    echo -n "."
+  done
+  
+  echo ""
+  log_error "Prometheus did not become ready in time."
+  docker logs prometheus-service 2>/dev/null | tail -n 10
+  return 1
+}
+
 # Function to start Grafana
 start_grafana() {
   log_step "Starting Grafana..."
@@ -147,13 +202,21 @@ start_grafana() {
   ensure_port_free "$GRAFANA_PORT" "grafana"
   stop_container "grafana-service"
   
+  log_step "Building Grafana image..."
+  if (cd "$REPO_ROOT" && docker build -t grafana-service:latest ./grafana > /dev/null 2>&1); then
+    log_success "Grafana image built."
+  else
+    log_error "Failed to build Grafana image."
+    return 1
+  fi
+  
   log_step "Starting Grafana container..."
   if docker run -d --name "grafana-service" \
       --network microservices-network \
       -p "${GRAFANA_PORT}:3000" \
       -e "GF_SECURITY_ADMIN_PASSWORD=admin" \
       --add-host=host.docker.internal:host-gateway \
-      grafana/grafana:latest > /dev/null; then
+      grafana-service:latest > /dev/null; then
     log_success "Grafana container started."
   else
     log_error "Failed to start Grafana container."
@@ -190,9 +253,10 @@ start_observability_stack() {
   
   ensure_docker_network
   
-  # Start in order: OTEL Collector first, then Tempo, then Grafana
+  # Start in order: OTEL Collector, Tempo, Prometheus, then Grafana
   start_otel_collector || return 1
   start_tempo || return 1
+  start_prometheus || return 1
   start_grafana || return 1
   
   log_success "Observability stack started successfully!"
@@ -202,6 +266,7 @@ start_observability_stack() {
      - HTTP: localhost:${OTEL_COLLECTOR_HTTP_PORT}
      - Health: localhost:${OTEL_COLLECTOR_HEALTH_PORT}
   🔍 Tempo: localhost:${TEMPO_API_PORT}
+  📊 Prometheus: http://localhost:${PROMETHEUS_PORT}
   📊 Grafana: http://localhost:${GRAFANA_PORT} (admin/admin)"
 }
 
@@ -210,6 +275,7 @@ stop_observability_stack() {
   log_step "🛑 Stopping Observability Stack..."
   
   stop_container "grafana-service"
+  stop_container "prometheus-service"
   stop_container "tempo-service" 
   stop_container "otel-collector-service"
   

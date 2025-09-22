@@ -6,6 +6,7 @@ import org.slf4j.LoggerFactory;
 import jakarta.servlet.http.HttpServletRequest;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 public class LoansController {
@@ -89,5 +90,44 @@ public class LoansController {
         long duration = System.currentTimeMillis() - startTime;
         logger.info("Loan deleted successfully with ID: {} in {}ms", id, duration);
         return result;
+    }
+
+    @GetMapping("/eligibility")
+    public Map<String, Object> checkLoanEligibility(@RequestParam String customerId, 
+                                                   @RequestParam String accountId, 
+                                                   HttpServletRequest request) {
+        logRequestDetails(request, "checkLoanEligibility");
+        long startTime = System.currentTimeMillis();
+
+        logger.info("Request received to check loan eligibility for customer: {} and account: {}", customerId, accountId);
+        
+        // Simple eligibility logic - in real scenario this would involve credit checks, account history, etc.
+        boolean eligible = true; // Default to eligible for demo
+        String reason = "Customer meets basic eligibility criteria";
+        double maxLoanAmount = 50000.0;
+        
+        // Simulate some business logic
+        if (customerId == null || customerId.isEmpty()) {
+            eligible = false;
+            reason = "Invalid customer ID";
+        } else if (accountId == null || accountId.isEmpty()) {
+            eligible = false;
+            reason = "Invalid account ID";
+        }
+        
+        Map<String, Object> response = Map.of(
+            "customerId", customerId,
+            "accountId", accountId,
+            "eligible", eligible,
+            "reason", reason,
+            "maxLoanAmount", maxLoanAmount,
+            "interestRate", 5.5
+        );
+
+        long duration = System.currentTimeMillis() - startTime;
+        logger.info("Loan eligibility check completed for customer: {} in {}ms - Eligible: {}", 
+                   customerId, duration, eligible);
+        
+        return response;
     }
 }

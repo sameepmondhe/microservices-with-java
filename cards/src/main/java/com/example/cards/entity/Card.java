@@ -10,6 +10,10 @@ public class Card {
 
     @Id
     private String cardId;
+    
+    private String customerId;      // Link to customer
+    private String accountId;       // Link to account
+    
     private String cardNumber;
     private String cardType;
     private String cardStatus;

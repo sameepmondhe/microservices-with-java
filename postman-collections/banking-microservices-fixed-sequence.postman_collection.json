@@ -1,0 +1,1097 @@
+{
+	"info": {
+		"_postman_id": "b5e9c5a1-4d8f-4a5e-9b0e-8d3f3d9e4c2d",
+		"name": "Banking Microservices - Fixed Sequence",
+		"description": "API tests for banking microservices application through gateway server - FIXED SEQUENCE",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "1. Customers Service",
+			"item": [
+				{
+					"name": "1.1. Create Customer 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 201\", function () {",
+									"    pm.response.to.have.status(201);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Response has customer ID\", function() {",
+									"    pm.expect(responseJson.customerId).to.exist;",
+									"});",
+									"",
+									"// Store customer ID for later use",
+									"pm.environment.set(\"customer_id_1\", responseJson.customerId);",
+									"console.log(\"Created Customer 1 with ID: \" + responseJson.customerId);"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerId\": \"C1-{{$timestamp}}\",\n    \"name\": \"John Doe\",\n    \"email\": \"john.doe@example.com\",\n    \"phone\": \"123-456-7890\",\n    \"address\": \"123 Main Street\",\n    \"city\": \"New York\",\n    \"state\": \"NY\",\n    \"zipCode\": \"10001\",\n    \"country\": \"USA\",\n    \"status\": \"Active\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/customers/create",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"customers",
+								"create"
+							]
+						},
+						"description": "Create a new customer"
+					},
+					"response": []
+				},
+				{
+					"name": "1.2. Get All Customers",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"pm.test(\"Response is an array\", function() {",
+									"    const responseJson = pm.response.json();",
+									"    pm.expect(Array.isArray(responseJson)).to.be.true;",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/customers/getAll",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"customers",
+								"getAll"
+							]
+						},
+						"description": "Get a list of all customers"
+					},
+					"response": []
+				},
+				{
+					"name": "1.3. Get Customer 1 by ID",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Customer ID matches expected value\", function() {",
+									"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"customer_id_1\"));",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/customers/{{customer_id_1}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"customers",
+								"{{customer_id_1}}"
+							]
+						},
+						"description": "Retrieve customer 1 by ID"
+					},
+					"response": []
+				},
+				{
+					"name": "1.4. Update Customer 1",
+					"event": [
+						{
+							"listen": "prerequest",
+							"script": {
+								"exec": [
+									"// Get current request body",
+									"var requestBody = JSON.parse(pm.request.body.raw);",
+									"",
+									"// Add customerId from environment variable to request body",
+									"requestBody.customerId = pm.environment.get(\"customer_id_1\");",
+									"",
+									"// Update request body",
+									"pm.request.body.raw = JSON.stringify(requestBody, null, 4);",
+									"",
+									"console.log(\"Added customerId to request body: \" + requestBody.customerId);"
+								],
+								"type": "text/javascript"
+							}
+						},
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Customer was updated\", function() {",
+									"    pm.expect(responseJson.name).to.eql(\"John Doe Updated\");",
+									"});"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "PUT",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"name\": \"John Doe Updated\",\n    \"email\": \"john.updated@example.com\",\n    \"phone\": \"555-123-4567\",\n    \"address\": \"789 Updated Street\",\n    \"city\": \"Boston\",\n    \"state\": \"MA\",\n    \"zipCode\": \"02101\",\n    \"country\": \"USA\",\n    \"status\": \"Active\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/customers/{{customer_id_1}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"customers",
+								"{{customer_id_1}}"
+							]
+						},
+						"description": "Update customer 1"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "2. Distributed Transactions (Using Customer 1)",
+			"item": [
+				{
+					"name": "2.1. Customer Onboarding - Complete Workflow",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Onboarding completed successfully\", function() {",
+									"    pm.expect(responseJson.status).to.be.oneOf([\"SUCCESS\", \"PARTIAL_SUCCESS\"]);",
+									"});",
+									"",
+									"pm.test(\"Account was created\", function() {",
+									"    pm.expect(responseJson.accountId).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Processing time exists\", function() {",
+									"    pm.expect(responseJson.processingTime).to.exist;",
+									"});",
+									"",
+									"// Store created account ID for further tests",
+									"if (responseJson.accountId) {",
+									"    pm.environment.set(\"onboarding_account_id\", responseJson.accountId);",
+									"}",
+									"",
+									"// Store created card ID if available",
+									"if (responseJson.cardId) {",
+									"    pm.environment.set(\"onboarding_card_id\", responseJson.cardId);",
+									"}",
+									"",
+									"console.log(\"Onboarding Response:\", JSON.stringify(responseJson, null, 2));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerId\": \"{{customer_id_1}}\",\n    \"initialDeposit\": \"1000.00\",\n    \"accountType\": \"SAVINGS\",\n    \"requestCreditCard\": true,\n    \"checkLoanEligibility\": true\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/accounts/onboarding",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"accounts",
+								"onboarding"
+							]
+						},
+						"description": "Complete customer onboarding workflow spanning 4 microservices"
+					},
+					"response": []
+				},
+				{
+					"name": "2.2. Test Cards Service - Direct Card Creation",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Card was created\", function() {",
+									"    pm.expect(responseJson.cardId).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Card has customer relationship\", function() {",
+									"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"customer_id_1\"));",
+									"});",
+									"",
+									"pm.test(\"Card number was generated\", function() {",
+									"    pm.expect(responseJson.cardNumber).to.exist;",
+									"});",
+									"",
+									"console.log(\"Direct Card Creation Response:\", JSON.stringify(responseJson, null, 2));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerId\": \"{{customer_id_1}}\",\n    \"accountId\": \"{{onboarding_account_id}}\",\n    \"cardType\": \"DEBIT\",\n    \"cardStatus\": \"ACTIVE\",\n    \"cardHolderName\": \"John Doe Direct\"\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/cards/create",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"cards",
+								"create"
+							]
+						},
+						"description": "Test direct card creation with customer/account relationship"
+					},
+					"response": []
+				},
+				{
+					"name": "2.3. Test Loans Service - Direct Eligibility Check",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Eligibility response has required fields\", function() {",
+									"    pm.expect(responseJson.eligible).to.exist;",
+									"    pm.expect(responseJson.customerId).to.exist;",
+									"    pm.expect(responseJson.accountId).to.exist;",
+									"    pm.expect(responseJson.reason).to.exist;",
+									"});",
+									"",
+									"pm.test(\"Customer ID matches\", function() {",
+									"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"customer_id_1\"));",
+									"});",
+									"",
+									"pm.test(\"Account ID matches\", function() {",
+									"    pm.expect(responseJson.accountId).to.eql(pm.environment.get(\"onboarding_account_id\"));",
+									"});",
+									"",
+									"console.log(\"Direct Loan Eligibility Response:\", JSON.stringify(responseJson, null, 2));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "GET",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/loans/eligibility?customerId={{customer_id_1}}&accountId={{onboarding_account_id}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"loans",
+								"eligibility"
+							],
+							"query": [
+								{
+									"key": "customerId",
+									"value": "{{customer_id_1}}"
+								},
+								{
+									"key": "accountId",
+									"value": "{{onboarding_account_id}}"
+								}
+							]
+						},
+						"description": "Test direct loan eligibility check with customer/account relationship"
+					},
+					"response": []
+				},
+				{
+					"name": "2.4. Customer Onboarding - Failure Scenario (Invalid Customer)",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 200 (service handles errors gracefully)\", function () {",
+									"    pm.response.to.have.status(200);",
+									"});",
+									"",
+									"const responseJson = pm.response.json();",
+									"",
+									"pm.test(\"Onboarding failed as expected\", function() {",
+									"    pm.expect(responseJson.status).to.eql(\"FAILED\");",
+									"});",
+									"",
+									"pm.test(\"Error message exists\", function() {",
+									"    pm.expect(responseJson.errors).to.exist;",
+									"    pm.expect(responseJson.errors.length).to.be.greaterThan(0);",
+									"});",
+									"",
+									"console.log(\"Failure Scenario Response:\", JSON.stringify(responseJson, null, 2));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "POST",
+						"header": [
+							{
+								"key": "Content-Type",
+								"value": "application/json"
+							}
+						],
+						"body": {
+							"mode": "raw",
+							"raw": "{\n    \"customerId\": \"INVALID-CUSTOMER-ID\",\n    \"initialDeposit\": \"1000.00\",\n    \"accountType\": \"SAVINGS\",\n    \"requestCreditCard\": true,\n    \"checkLoanEligibility\": true\n}"
+						},
+						"url": {
+							"raw": "{{gateway_url}}/accounts/onboarding",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"accounts",
+								"onboarding"
+							]
+						},
+						"description": "Test onboarding failure scenario with invalid customer ID"
+					},
+					"response": []
+				}
+			]
+		},
+		{
+			"name": "3. Individual Service Tests",
+			"item": [
+				{
+					"name": "3.1. Accounts Service",
+					"item": [
+						{
+							"name": "3.1.1. Create Account 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseJson = pm.response.json();",
+											"",
+											"pm.test(\"Response has account ID\", function() {",
+											"    pm.expect(responseJson.accountId).to.exist;",
+											"});",
+											"",
+											"// Store account ID for later use",
+											"pm.environment.set(\"account_id_1\", responseJson.accountId);",
+											"console.log(\"Created Account 1 with ID: \" + responseJson.accountId);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"accountId\": \"A1-{{$timestamp}}\",\n    \"accountName\": \"Savings Account\",\n    \"accountType\": \"Savings\",\n    \"accountStatus\": \"Active\",\n    \"accountBalance\": \"1000.00\",\n    \"accountCurrency\": \"USD\",\n    \"accountCreatedDate\": \"{{$isoTimestamp}}\"\n}"
+								},
+								"url": {
+									"raw": "{{gateway_url}}/accounts/create",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"accounts",
+										"create"
+									]
+								},
+								"description": "Create a new savings account"
+							},
+							"response": []
+						},
+						{
+							"name": "3.1.2. Get All Accounts",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Response is an array\", function() {",
+											"    const responseJson = pm.response.json();",
+											"    pm.expect(Array.isArray(responseJson)).to.be.true;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/accounts/getAll",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"accounts",
+										"getAll"
+									]
+								},
+								"description": "Get a list of all accounts"
+							},
+							"response": []
+						},
+						{
+							"name": "3.1.3. Get Account 1 by ID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseJson = pm.response.json();",
+											"",
+											"pm.test(\"Account ID matches expected value\", function() {",
+											"    pm.expect(responseJson.accountId).to.eql(pm.environment.get(\"account_id_1\"));",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/accounts/{{account_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"accounts",
+										"{{account_id_1}}"
+									]
+								},
+								"description": "Retrieve account 1 by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "3.1.4. Update Account 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseJson = pm.response.json();",
+											"",
+											"pm.test(\"Account balance was updated\", function() {",
+											"    pm.expect(responseJson.accountBalance).to.eql(\"2000.00\");",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"accountName\": \"Updated Savings Account\",\n    \"accountType\": \"Savings\",\n    \"accountStatus\": \"Active\",\n    \"accountBalance\": \"2000.00\",\n    \"accountCurrency\": \"USD\",\n    \"accountCreatedDate\": \"{{$isoTimestamp}}\"\n}"
+								},
+								"url": {
+									"raw": "{{gateway_url}}/accounts/{{account_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"accounts",
+										"{{account_id_1}}"
+									]
+								},
+								"description": "Update account 1"
+							},
+							"response": []
+						},
+						{
+							"name": "3.1.5. Delete Account 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"console.log(\"Deleted Account ID: \" + pm.environment.get(\"account_id_1\"));"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/accounts/{{account_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"accounts",
+										"{{account_id_1}}"
+									]
+								},
+								"description": "Delete account 1"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.2. Cards Service",
+					"item": [
+						{
+							"name": "3.2.1. Create Card 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseJson = pm.response.json();",
+											"",
+											"pm.test(\"Response has card ID\", function() {",
+											"    pm.expect(responseJson.cardId).to.exist;",
+											"});",
+											"",
+											"// Store card ID for later use",
+											"pm.environment.set(\"card_id_1\", responseJson.cardId);",
+											"console.log(\"Created Card 1 with ID: \" + responseJson.cardId);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"cardId\": \"C1-{{$timestamp}}\",\n    \"cardNumber\": \"4111-1111-1111-1111\",\n    \"cardType\": \"Credit\",\n    \"cardStatus\": \"Active\",\n    \"cardHolderName\": \"John Doe\",\n    \"cardExpiry\": \"05/2030\",\n    \"cvv\": \"123\"\n}"
+								},
+								"url": {
+									"raw": "{{gateway_url}}/cards/create",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"cards",
+										"create"
+									]
+								},
+								"description": "Create a new credit card"
+							},
+							"response": []
+						},
+						{
+							"name": "3.2.2. Get All Cards",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Response is an array\", function() {",
+											"    const responseJson = pm.response.json();",
+											"    pm.expect(Array.isArray(responseJson)).to.be.true;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/cards/getAll",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"cards",
+										"getAll"
+									]
+								},
+								"description": "Get a list of all cards"
+							},
+							"response": []
+						},
+						{
+							"name": "3.2.3. Get Card 1 by ID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseJson = pm.response.json();",
+											"",
+											"pm.test(\"Card ID matches expected value\", function() {",
+											"    pm.expect(responseJson.cardId).to.eql(pm.environment.get(\"card_id_1\"));",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/cards/{{card_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"cards",
+										"{{card_id_1}}"
+									]
+								},
+								"description": "Retrieve card 1 by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "3.2.4. Update Card 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseJson = pm.response.json();",
+											"",
+											"pm.test(\"Card status was updated\", function() {",
+											"    pm.expect(responseJson.cardStatus).to.eql(\"Inactive\");",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "PUT",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"cardNumber\": \"4111-1111-1111-1111\",\n    \"cardType\": \"Credit\",\n    \"cardStatus\": \"Inactive\",\n    \"cardHolderName\": \"John Doe Updated\",\n    \"cardExpiry\": \"12/2030\",\n    \"cvv\": \"789\"\n}"
+								},
+								"url": {
+									"raw": "{{gateway_url}}/cards/{{card_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"cards",
+										"{{card_id_1}}"
+									]
+								},
+								"description": "Update card 1"
+							},
+							"response": []
+						},
+						{
+							"name": "3.2.5. Delete Card 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/cards/{{card_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"cards",
+										"{{card_id_1}}"
+									]
+								},
+								"description": "Delete card 1"
+							},
+							"response": []
+						}
+					]
+				},
+				{
+					"name": "3.3. Loans Service",
+					"item": [
+						{
+							"name": "3.3.1. Create Loan 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"const responseText = pm.response.text();",
+											"",
+											"// Generate a loan ID since we can't extract it from response",
+											"const loanId = \"L1-\" + new Date().getTime();",
+											"pm.environment.set(\"loan_id_1\", loanId);",
+											"console.log(\"Created Loan 1 with ID: \" + loanId);"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "POST",
+								"header": [
+									{
+										"key": "Content-Type",
+										"value": "application/json"
+									}
+								],
+								"body": {
+									"mode": "raw",
+									"raw": "{\n    \"loanId\": \"L1-{{$timestamp}}\",\n    \"loanType\": \"Personal\",\n    \"loanAmount\": \"10000.00\",\n    \"loanStatus\": \"Approved\",\n    \"loanStartDate\": \"2023-01-01\",\n    \"loanEndDate\": \"2028-01-01\",\n    \"loanInterestRate\": \"5.5\"\n}"
+								},
+								"url": {
+									"raw": "{{gateway_url}}/loans/create",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"loans",
+										"create"
+									]
+								},
+								"description": "Create a new personal loan"
+							},
+							"response": []
+						},
+						{
+							"name": "3.3.2. Get All Loans",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});",
+											"",
+											"pm.test(\"Response is an array\", function() {",
+											"    const responseJson = pm.response.json();",
+											"    pm.expect(Array.isArray(responseJson)).to.be.true;",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/loans/getAll",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"loans",
+										"getAll"
+									]
+								},
+								"description": "Get a list of all loans"
+							},
+							"response": []
+						},
+						{
+							"name": "3.3.3. Get Loan 1 by ID",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "GET",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/loans/{{loan_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"loans",
+										"{{loan_id_1}}"
+									]
+								},
+								"description": "Retrieve loan 1 by ID"
+							},
+							"response": []
+						},
+						{
+							"name": "3.3.4. Delete Loan 1",
+							"event": [
+								{
+									"listen": "test",
+									"script": {
+										"exec": [
+											"pm.test(\"Status code is 200\", function () {",
+											"    pm.response.to.have.status(200);",
+											"});"
+										],
+										"type": "text/javascript"
+									}
+								}
+							],
+							"request": {
+								"method": "DELETE",
+								"header": [],
+								"url": {
+									"raw": "{{gateway_url}}/loans/{{loan_id_1}}",
+									"host": [
+										"{{gateway_url}}"
+									],
+									"path": [
+										"loans",
+										"{{loan_id_1}}"
+									]
+								},
+								"description": "Delete loan 1"
+							},
+							"response": []
+						}
+					]
+				}
+			]
+		},
+		{
+			"name": "4. Cleanup",
+			"item": [
+				{
+					"name": "4.1. Delete Customer 1",
+					"event": [
+						{
+							"listen": "test",
+							"script": {
+								"exec": [
+									"pm.test(\"Status code is 204\", function () {",
+									"    pm.response.to.have.status(204);",
+									"});",
+									"",
+									"console.log(\"Deleted Customer ID: \" + pm.environment.get(\"customer_id_1\"));"
+								],
+								"type": "text/javascript"
+							}
+						}
+					],
+					"request": {
+						"method": "DELETE",
+						"header": [],
+						"url": {
+							"raw": "{{gateway_url}}/customers/{{customer_id_1}}",
+							"host": [
+								"{{gateway_url}}"
+							],
+							"path": [
+								"customers",
+								"{{customer_id_1}}"
+							]
+						},
+						"description": "Delete customer 1"
+					},
+					"response": []
+				}
+			]
+		}
+	],
+	"event": [
+		{
+			"listen": "prerequest",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		},
+		{
+			"listen": "test",
+			"script": {
+				"type": "text/javascript",
+				"exec": [
+					""
+				]
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "gateway_url",
+			"value": "http://localhost:8072",
+			"type": "string"
+		}
+	]
+}

@@ -15,6 +15,10 @@ public class Account {
     @Id
     @NotNull(message = "Account ID cannot be null")
     private String accountId;
+    
+    @NotNull(message = "Customer ID cannot be null")
+    private String customerId;  // Link to customer
+    
     private String accountName;
     private String accountType;
     private String accountStatus;

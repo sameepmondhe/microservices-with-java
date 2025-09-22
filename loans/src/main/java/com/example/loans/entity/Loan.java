@@ -9,6 +9,10 @@ import org.springframework.data.mongodb.core.mapping.Document;
 public class Loan {
     @Id
     private String loanId;
+    
+    private String customerId;       // Link to customer
+    private String accountId;        // Link to account
+    
     private String loanType;
     private String loanAmount;
     private String loanStatus;

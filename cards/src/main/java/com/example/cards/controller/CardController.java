@@ -33,11 +33,24 @@ public class CardController {
         logRequestDetails(request, "createCard");
         long startTime = System.currentTimeMillis();
 
-        logger.info("Request received to create a new card");
+        logger.info("Request received to create a new card for customer: {} and account: {}", 
+                   card.getCustomerId(), card.getAccountId());
+        
+        // Auto-generate card ID if not provided
+        if (card.getCardId() == null || card.getCardId().isEmpty()) {
+            card.setCardId("CARD-" + java.util.UUID.randomUUID().toString().substring(0, 8));
+        }
+        
+        // Auto-generate card number for demo
+        if (card.getCardNumber() == null || card.getCardNumber().isEmpty()) {
+            card.setCardNumber("****-****-****-" + String.format("%04d", (int)(Math.random() * 10000)));
+        }
+        
         Card createdCard = cardService.createCard(card);
 
         long duration = System.currentTimeMillis() - startTime;
-        logger.info("Card created successfully in {}ms", duration);
+        logger.info("Card created successfully with ID: {} for customer: {} in {}ms", 
+                   createdCard.getCardId(), card.getCustomerId(), duration);
         return createdCard;
     }
 

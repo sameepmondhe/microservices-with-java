@@ -1,0 +1,338 @@
+{
+	"info": {
+		"_postman_id": "d7f8e9a0-1b2c-3d4e-5f6a-7b8c9d0e1f2a",
+		"name": "Banking Microservices - Distributed Transactions",
+		"description": "Test distributed transactions and inter-service communication for banking microservices",
+		"schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+	},
+	"item": [
+		{
+			"name": "Setup - Create Test Customer",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 201\", function () {",
+							"    pm.response.to.have.status(201);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"pm.environment.set(\"test_customer_id\", responseJson.customerId);",
+							"console.log(\"Created test customer: \" + responseJson.customerId);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"customerId\": \"DIST-TEST-{{$timestamp}}\",\n    \"name\": \"Distributed Test Customer\",\n    \"email\": \"dist.test@example.com\",\n    \"phone\": \"555-DIST-TEST\",\n    \"address\": \"123 Distributed Street\",\n    \"city\": \"Microservices City\",\n    \"state\": \"OTEL\",\n    \"zipCode\": \"12345\",\n    \"country\": \"Observability Land\",\n    \"status\": \"Active\"\n}"
+				},
+				"url": {
+					"raw": "{{gateway_url}}/customers/create",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"customers",
+						"create"
+					]
+				}
+			}
+		},
+		{
+			"name": "Distributed Transaction - Customer Onboarding SUCCESS",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Status code is 200\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"",
+							"pm.test(\"Onboarding completed successfully\", function() {",
+							"    pm.expect(responseJson.status).to.be.oneOf([\"SUCCESS\", \"PARTIAL_SUCCESS\"]);",
+							"});",
+							"",
+							"pm.test(\"All distributed steps completed\", function() {",
+							"    pm.expect(responseJson.customerId).to.exist;",
+							"    pm.expect(responseJson.accountId).to.exist;",
+							"    pm.expect(responseJson.cardId).to.exist;",
+							"    pm.expect(responseJson.loanEligible).to.exist;",
+							"});",
+							"",
+							"pm.test(\"Processing time is reasonable\", function() {",
+							"    pm.expect(responseJson.processingTime).to.exist;",
+							"    const timeMs = parseInt(responseJson.processingTime.replace('ms', ''));",
+							"    pm.expect(timeMs).to.be.below(10000); // Should complete in under 10 seconds",
+							"});",
+							"",
+							"// Store for further testing",
+							"pm.environment.set(\"dist_account_id\", responseJson.accountId);",
+							"pm.environment.set(\"dist_card_id\", responseJson.cardId);",
+							"",
+							"console.log(\"🎉 DISTRIBUTED TRANSACTION SUCCESS!\");",
+							"console.log(\"Customer: \" + responseJson.customerId);",
+							"console.log(\"Account: \" + responseJson.accountId);",
+							"console.log(\"Card: \" + responseJson.cardId);",
+							"console.log(\"Loan Eligible: \" + responseJson.loanEligible);",
+							"console.log(\"Processing Time: \" + responseJson.processingTime);"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"customerId\": \"{{test_customer_id}}\",\n    \"initialDeposit\": \"5000.00\",\n    \"accountType\": \"PREMIUM_SAVINGS\",\n    \"requestCreditCard\": true,\n    \"checkLoanEligibility\": true\n}"
+				},
+				"url": {
+					"raw": "{{gateway_url}}/accounts/onboarding",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"accounts",
+						"onboarding"
+					]
+				}
+			}
+		},
+		{
+			"name": "Verify - Customer Exists",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Customer exists and is retrievable\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"pm.test(\"Customer ID matches\", function() {",
+							"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"test_customer_id\"));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gateway_url}}/customers/{{test_customer_id}}",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"customers",
+						"{{test_customer_id}}"
+					]
+				}
+			}
+		},
+		{
+			"name": "Verify - Account Created",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Account exists and is retrievable\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"pm.test(\"Account ID matches\", function() {",
+							"    pm.expect(responseJson.accountId).to.eql(pm.environment.get(\"dist_account_id\"));",
+							"});",
+							"",
+							"pm.test(\"Account has customer relationship\", function() {",
+							"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"test_customer_id\"));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gateway_url}}/accounts/{{dist_account_id}}",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"accounts",
+						"{{dist_account_id}}"
+					]
+				}
+			}
+		},
+		{
+			"name": "Verify - Card Created",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Card exists and is retrievable\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"pm.test(\"Card has relationships\", function() {",
+							"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"test_customer_id\"));",
+							"    pm.expect(responseJson.accountId).to.eql(pm.environment.get(\"dist_account_id\"));",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gateway_url}}/cards/{{dist_card_id}}",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"cards",
+						"{{dist_card_id}}"
+					]
+				}
+			}
+		},
+		{
+			"name": "Verify - Loan Eligibility Direct",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Loan eligibility check works\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"pm.test(\"Eligibility response is complete\", function() {",
+							"    pm.expect(responseJson.eligible).to.exist;",
+							"    pm.expect(responseJson.customerId).to.eql(pm.environment.get(\"test_customer_id\"));",
+							"    pm.expect(responseJson.accountId).to.eql(pm.environment.get(\"dist_account_id\"));",
+							"    pm.expect(responseJson.maxLoanAmount).to.exist;",
+							"    pm.expect(responseJson.interestRate).to.exist;",
+							"});"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "GET",
+				"header": [],
+				"url": {
+					"raw": "{{gateway_url}}/loans/eligibility?customerId={{test_customer_id}}&accountId={{dist_account_id}}",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"loans",
+						"eligibility"
+					],
+					"query": [
+						{
+							"key": "customerId",
+							"value": "{{test_customer_id}}"
+						},
+						{
+							"key": "accountId",
+							"value": "{{dist_account_id}}"
+						}
+					]
+				}
+			}
+		},
+		{
+			"name": "Failure Scenario - Invalid Customer Onboarding",
+			"event": [
+				{
+					"listen": "test",
+					"script": {
+						"exec": [
+							"pm.test(\"Service handles failure gracefully\", function () {",
+							"    pm.response.to.have.status(200);",
+							"});",
+							"",
+							"const responseJson = pm.response.json();",
+							"pm.test(\"Onboarding failed as expected\", function() {",
+							"    pm.expect(responseJson.status).to.eql(\"FAILED\");",
+							"    pm.expect(responseJson.errors).to.exist;",
+							"    pm.expect(responseJson.errors.length).to.be.greaterThan(0);",
+							"});",
+							"",
+							"console.log(\"💥 EXPECTED FAILURE SCENARIO:\");",
+							"console.log(\"Status: \" + responseJson.status);",
+							"console.log(\"Errors: \" + JSON.stringify(responseJson.errors));"
+						],
+						"type": "text/javascript"
+					}
+				}
+			],
+			"request": {
+				"method": "POST",
+				"header": [
+					{
+						"key": "Content-Type",
+						"value": "application/json"
+					}
+				],
+				"body": {
+					"mode": "raw",
+					"raw": "{\n    \"customerId\": \"NONEXISTENT-CUSTOMER-12345\",\n    \"initialDeposit\": \"1000.00\",\n    \"accountType\": \"SAVINGS\",\n    \"requestCreditCard\": true,\n    \"checkLoanEligibility\": true\n}"
+				},
+				"url": {
+					"raw": "{{gateway_url}}/accounts/onboarding",
+					"host": [
+						"{{gateway_url}}"
+					],
+					"path": [
+						"accounts",
+						"onboarding"
+					]
+				}
+			}
+		}
+	],
+	"variable": [
+		{
+			"key": "gateway_url",
+			"value": "http://localhost:8072",
+			"type": "string"
+		}
+	]
+}

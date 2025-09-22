@@ -85,6 +85,7 @@ stop_local_service 8888 "config-server" || echo "  ⚠️ Failed to stop config-
 echo -e "\n🛑 Stopping microservices running in Docker containers..."
 stop_container "otel-collector-service" || echo "  ⚠️ Failed to stop otel-collector-service, continuing..."
 stop_container "tempo-service" || echo "  ⚠️ Failed to stop tempo-service, continuing..."
+stop_container "prometheus-service" || echo "  ⚠️ Failed to stop prometheus-service, continuing..."
 stop_container "grafana-service" || echo "  ⚠️ Failed to stop grafana-service, continuing..."
 stop_container "eureka-server-service" || echo "  ⚠️ Failed to stop eureka-server-service, continuing..."
 stop_container "accounts-service" || echo "  ⚠️ Failed to stop accounts-service, continuing..."
