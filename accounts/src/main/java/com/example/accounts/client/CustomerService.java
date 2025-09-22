@@ -1,4 +1,4 @@
-package com.example.accounts.service;
+package com.example.accounts.client;
 
 import com.example.accounts.dto.CustomerDto;
 import org.slf4j.Logger;

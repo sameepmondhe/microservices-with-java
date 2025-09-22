@@ -31,6 +31,13 @@ dependencies {
     implementation 'org.springframework.cloud:spring-cloud-starter-config'
     implementation 'org.springframework.boot:spring-boot-starter-actuator'
     implementation 'io.micrometer:micrometer-registry-prometheus' // Added for Prometheus
+    
+    // Structured logging dependencies
+    implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    
+    // OpenTelemetry API for custom tracing and business attributes
+    implementation 'io.opentelemetry:opentelemetry-api:1.40.0'
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.6.0-alpha'
 
     testImplementation 'org.springframework.boot:spring-boot-starter-test'
 }

@@ -4,14 +4,16 @@ import com.example.accounts.dto.CustomerDto;
 import com.example.accounts.dto.OnboardingRequest;
 import com.example.accounts.dto.OnboardingResponse;
 import com.example.accounts.entity.Account;
+import com.example.accounts.tracing.BusinessContextTracer;
+import io.opentelemetry.api.trace.Span;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.slf4j.MDC;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.client.RestClientException;
 
+import java.math.BigDecimal;
 import java.time.LocalDateTime;
 import java.time.format.DateTimeFormatter;
 import java.util.ArrayList;
@@ -32,45 +34,98 @@ public class OnboardingService {
     @Autowired
     private AccountService accountService;
     
+    @Autowired
+    private BusinessContextTracer businessTracer;
+    
     public OnboardingResponse processCustomerOnboarding(OnboardingRequest request) {
         long startTime = System.currentTimeMillis();
         String correlationId = UUID.randomUUID().toString();
         
-        // Set up MDC for distributed tracing
-        MDC.put("correlationId", correlationId);
-        MDC.put("operation", "customer_onboarding");
-        MDC.put("customerId", request.getCustomerId());
-        
+        // Initialize response and errors outside try block
         OnboardingResponse response = new OnboardingResponse();
         response.setCustomerId(request.getCustomerId());
         List<String> errors = new ArrayList<>();
         
+        // Create business context for the entire onboarding workflow
+        var businessContext = businessTracer.createContext()
+                .customerId(request.getCustomerId())
+                .accountType(request.getAccountType())
+                .transactionAmount(new BigDecimal(request.getInitialDeposit()))
+                .onboardingStep("START")
+                .onboardingStatus("IN_PROGRESS")
+                .transactionType("ONBOARDING");
+        
+        // Start business span for the entire onboarding process
+        Span onboardingSpan = businessTracer.startBusinessSpan("customer.onboarding.workflow", businessContext);
+        
         try {
+            // Add correlation ID to span for tracing
+            onboardingSpan.setAttribute("correlation.id", correlationId);
+            onboardingSpan.setAttribute("operation", "customer_onboarding");
+            
             logger.info("Starting customer onboarding process for customer: {}", request.getCustomerId());
             
             // Step 1: Verify customer exists
+            businessTracer.recordBusinessEvent("onboarding.step.start", 
+                businessTracer.createContext().onboardingStep("CUSTOMER_VERIFICATION"));
+            
             CustomerDto customer = verifyCustomer(request.getCustomerId());
             if (customer == null) {
                 errors.add("Customer not found");
                 response.setStatus("FAILED");
                 response.setErrors(errors);
                 
+                // Record failure in business context
+                businessTracer.addBusinessAttributes(
+                    businessTracer.createContext()
+                        .onboardingStatus("FAILED")
+                        .errorCode("CUSTOMER_NOT_FOUND")
+                        .errorCategory("VALIDATION_ERROR"));
+                
                 // Still set processing time for failed requests
                 long duration = System.currentTimeMillis() - startTime;
                 response.setProcessingTime(duration + "ms");
+                
+                businessTracer.addBusinessAttributes(
+                    businessTracer.createContext().processingTime(duration));
                 
                 logger.warn("Customer onboarding failed - customer not found: {} in {}ms", 
                            request.getCustomerId(), duration);
                 return response;
             }
             
+            // Record successful customer verification
+            businessTracer.recordBusinessEvent("onboarding.step.completed", 
+                businessTracer.createContext()
+                    .onboardingStep("CUSTOMER_VERIFICATION")
+                    .customerType(customer.getName() != null ? "EXISTING" : "NEW"));
+            
             // Step 2: Create primary account
+            businessTracer.recordBusinessEvent("onboarding.step.start", 
+                businessTracer.createContext().onboardingStep("ACCOUNT_CREATION"));
+            
             Account account = createPrimaryAccount(request);
             if (account != null) {
                 response.setAccountId(account.getAccountId());
+                
+                // Record account creation success
+                businessTracer.addBusinessAttributes(
+                    businessTracer.createContext()
+                        .accountId(account.getAccountId())
+                        .accountBalance(new BigDecimal(account.getAccountBalance())));
+                
+                businessTracer.recordBusinessEvent("onboarding.step.completed", 
+                    businessTracer.createContext()
+                        .onboardingStep("ACCOUNT_CREATION")
+                        .accountId(account.getAccountId()));
+                
                 logger.info("Account created successfully: {}", account.getAccountId());
             } else {
                 errors.add("Failed to create account");
+                businessTracer.addBusinessAttributes(
+                    businessTracer.createContext()
+                        .errorCode("ACCOUNT_CREATION_FAILED")
+                        .errorCategory("SERVICE_ERROR"));
             }
             
             // Step 3: Issue credit card (if requested)
@@ -107,7 +162,8 @@ public class OnboardingService {
             response.setStatus("FAILED");
             response.setErrors(errors);
         } finally {
-            MDC.clear();
+            // Close the business span
+            onboardingSpan.end();
         }
         
         return response;

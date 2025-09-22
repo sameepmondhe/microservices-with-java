@@ -41,6 +41,10 @@ dependencies {
     
     // Structured logging dependencies
     implementation 'net.logstash.logback:logstash-logback-encoder:7.4'
+    
+    // OpenTelemetry API for custom tracing and business attributes
+    implementation 'io.opentelemetry:opentelemetry-api:1.40.0'
+    implementation 'io.opentelemetry.instrumentation:opentelemetry-logback-appender-1.0:2.6.0-alpha'
 
     developmentOnly 'org.springframework.boot:spring-boot-devtools:3.2.5'
 
