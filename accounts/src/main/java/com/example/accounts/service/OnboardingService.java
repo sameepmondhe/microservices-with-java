@@ -130,37 +130,81 @@ public class OnboardingService {
             
             // Step 3: Issue credit card (if requested)
             if (request.isRequestCreditCard() && account != null) {
+                businessTracer.recordBusinessEvent("onboarding.step.start", 
+                    businessTracer.createContext().onboardingStep("CREDIT_CARD_ISSUANCE"));
+                
                 String cardId = issueCreditCard(request.getCustomerId(), account.getAccountId());
                 if (cardId != null) {
                     response.setCardId(cardId);
+                    businessTracer.recordBusinessEvent("onboarding.step.completed", 
+                        businessTracer.createContext()
+                            .onboardingStep("CREDIT_CARD_ISSUANCE")
+                            .cardId(cardId));
                     logger.info("Credit card issued successfully: {}", cardId);
                 } else {
                     errors.add("Failed to issue credit card");
+                    businessTracer.addBusinessAttributes(
+                        businessTracer.createContext()
+                            .onboardingStep("CREDIT_CARD_ISSUANCE")
+                            .errorCode("CARD_ISSUANCE_FAILED")
+                            .errorCategory("SERVICE_ERROR"));
                 }
             }
             
             // Step 4: Check loan eligibility (if requested)
             if (request.isCheckLoanEligibility() && account != null) {
+                businessTracer.recordBusinessEvent("onboarding.step.start", 
+                    businessTracer.createContext().onboardingStep("LOAN_ELIGIBILITY"));
+                
                 boolean eligible = checkLoanEligibility(request.getCustomerId(), account.getAccountId());
                 response.setLoanEligible(eligible);
+                
+                businessTracer.recordBusinessEvent("onboarding.step.completed", 
+                    businessTracer.createContext()
+                        .onboardingStep("LOAN_ELIGIBILITY")
+                        .loanEligible(eligible));
+                
                 logger.info("Loan eligibility check completed: {}", eligible);
             }
             
             // Set final status
-            response.setStatus(errors.isEmpty() ? "SUCCESS" : "PARTIAL_SUCCESS");
+            String finalStatus = errors.isEmpty() ? "SUCCESS" : "PARTIAL_SUCCESS";
+            response.setStatus(finalStatus);
             response.setErrors(errors);
             
             long duration = System.currentTimeMillis() - startTime;
             response.setProcessingTime(duration + "ms");
             
+            // Add final business attributes to the main span
+            businessTracer.addBusinessAttributes(
+                businessTracer.createContext()
+                    .onboardingStatus(finalStatus)
+                    .processingTime(duration));
+            
+            // Also add correlation ID to the span directly
+            onboardingSpan.setAttribute("business.correlation.id", correlationId);
+            
             logger.info("Customer onboarding completed for: {} in {}ms with status: {}", 
-                       request.getCustomerId(), duration, response.getStatus());
+                       request.getCustomerId(), duration, finalStatus);
             
         } catch (Exception e) {
             logger.error("Customer onboarding failed for: {}. Error: {}", request.getCustomerId(), e.getMessage(), e);
             errors.add("Onboarding process failed: " + e.getMessage());
             response.setStatus("FAILED");
             response.setErrors(errors);
+            
+            long duration = System.currentTimeMillis() - startTime;
+            response.setProcessingTime(duration + "ms");
+            
+            // Add failure attributes to the main span
+            businessTracer.addBusinessAttributes(
+                businessTracer.createContext()
+                    .onboardingStatus("FAILED")
+                    .errorCode("SYSTEM_ERROR")
+                    .errorCategory("EXCEPTION")
+                    .processingTime(duration));
+            
+            onboardingSpan.setAttribute("business.correlation.id", correlationId);
         } finally {
             // Close the business span
             onboardingSpan.end();
