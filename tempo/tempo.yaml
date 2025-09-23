@@ -29,3 +29,15 @@ query_frontend:
     throughput_bytes_slo: 1.073741824e+09
   trace_by_id:
     duration_slo: 5s
+
+# Basic metrics generation - simplified
+metrics_generator:
+  registry:
+    external_labels:
+      source: tempo
+      cluster: docker-compose
+  storage:
+    path: /tmp/tempo/generator/wal
+    remote_write:
+      - url: http://prometheus-service:9090/api/v1/write
+        send_exemplars: true

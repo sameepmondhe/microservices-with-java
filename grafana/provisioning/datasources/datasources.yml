@@ -10,6 +10,11 @@ datasources:
     editable: true
     jsonData:
       timeInterval: "5s"
+      httpMethod: POST
+      manageAlerts: true
+      prometheusType: Prometheus
+      prometheusVersion: 2.40.0
+      cacheLevel: High
       
   - name: Tempo
     type: tempo
@@ -18,24 +23,53 @@ datasources:
     url: http://tempo-service:3200
     editable: true
     jsonData:
+      httpMethod: GET
       tracesToLogs:
-        datasourceUid: 'loki'
-        tags: ['job', 'instance', 'pod', 'namespace']
+        datasourceUid: 'Loki'
+        tags: ['job', 'instance', 'pod', 'namespace', 'service']
         mappedTags: [{ key: 'service.name', value: 'service' }]
-        mapTagNamesEnabled: false
+        mapTagNamesEnabled: true
         spanStartTimeShift: '1h'
         spanEndTimeShift: '1h'
-        filterByTraceID: false
-        filterBySpanID: false
+        filterByTraceID: true
+        filterBySpanID: true
+        lokiSearch: true
       tracesToMetrics:
         datasourceUid: 'Prometheus'
         tags: [{ key: 'service.name', value: 'service' }]
         queries:
-          - name: 'Sample query'
-            query: 'sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m]))'
+          - name: 'Request Rate'
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags}[5m]))'
+          - name: 'Request Duration'
+            query: 'histogram_quantile(0.9, sum(rate(traces_spanmetrics_latency_bucket{$$__tags}[5m])) by (le))'
+          - name: 'Request Errors'  
+            query: 'sum(rate(traces_spanmetrics_calls_total{$$__tags,status_code="STATUS_CODE_ERROR"}[5m]))'
       serviceMap:
         datasourceUid: 'Prometheus'
       search:
         hide: false
       nodeGraph:
         enabled: true
+      lokiSearch:
+        datasourceUid: 'Loki'
+        
+  - name: Loki
+    type: loki
+    access: proxy
+    uid: Loki
+    url: http://loki-service:3100
+    editable: true
+    jsonData:
+      maxLines: 1000
+      manageAlerts: true
+      derivedFields:
+        - name: "TraceID"
+          label: "trace_id"
+          url: "/explore?orgId=1&left=[\"now-1h\",\"now\",\"Tempo\",{\"query\":\"${__value.raw}\"}]"
+          datasourceUid: 'Tempo'
+          matcherRegex: "trace_id=(\\w+)"
+        - name: "SpanID"
+          label: "span_id"
+          url: "/explore?orgId=1&left=[\"now-1h\",\"now\",\"Tempo\",{\"query\":\"${__value.raw}\"}]"
+          datasourceUid: 'Tempo'
+          matcherRegex: "span_id=(\\w+)"

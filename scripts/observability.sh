@@ -26,6 +26,13 @@ TEMPO_OTLP_HTTP_PORT=9318  # Different from OTEL collector
 # Prometheus configuration
 PROMETHEUS_PORT=9090
 
+# Loki configuration
+LOKI_PORT=3100
+LOKI_GRPC_PORT=9096
+
+# Promtail configuration  
+PROMTAIL_PORT=9080
+
 GRAFANA_PORT=3000
 
 # Function to start OTEL collector
@@ -143,6 +150,116 @@ wait_for_tempo() {
   return 1
 }
 
+# Function to start Loki
+start_loki() {
+  log_step "Starting Loki..."
+  
+  ensure_port_free "$LOKI_PORT" "loki-api"
+  ensure_port_free "$LOKI_GRPC_PORT" "loki-grpc"
+  
+  stop_container "loki-service"
+  
+  log_step "Building Loki image..."
+  if (cd "$REPO_ROOT" && docker build -t loki-service:latest ./loki > /dev/null 2>&1); then
+    log_success "Loki image built."
+  else
+    log_error "Failed to build Loki image."
+    return 1
+  fi
+  
+  log_step "Starting Loki container..."
+  if docker run -d --name "loki-service" \
+      --network microservices-network \
+      -p "${LOKI_PORT}:3100" \
+      -p "${LOKI_GRPC_PORT}:9096" \
+      --add-host=host.docker.internal:host-gateway \
+      loki-service:latest > /dev/null; then
+    log_success "Loki container started."
+  else
+    log_error "Failed to start Loki container."
+    return 1
+  fi
+  
+  wait_for_loki
+}
+
+# Function to wait for Loki readiness
+wait_for_loki() {
+  local retries=20
+  local delay=3
+  log_step "Waiting for Loki readiness..."
+  
+  while (( retries > 0 )); do
+    if curl -f "http://localhost:${LOKI_PORT}/ready" >/dev/null 2>&1; then
+      log_success "Loki is ready."
+      return 0
+    fi
+    retries=$((retries - 1))
+    sleep "$delay"
+    echo -n "."
+  done
+  
+  echo ""
+  log_error "Loki did not become ready in time."
+  docker logs loki-service 2>/dev/null | tail -n 10
+  return 1
+}
+
+# Function to start Promtail
+start_promtail() {
+  log_step "Starting Promtail..."
+  
+  ensure_port_free "$PROMTAIL_PORT" "promtail"
+  
+  stop_container "promtail-service"
+  
+  log_step "Building Promtail image..."
+  if (cd "$REPO_ROOT" && docker build -t promtail-service:latest ./promtail > /dev/null 2>&1); then
+    log_success "Promtail image built."
+  else
+    log_error "Failed to build Promtail image."
+    return 1
+  fi
+  
+  log_step "Starting Promtail container..."
+  if docker run -d --name "promtail-service" \
+      --network microservices-network \
+      -p "${PROMTAIL_PORT}:9080" \
+      -v /var/run/docker.sock:/var/run/docker.sock:ro \
+      -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
+      --add-host=host.docker.internal:host-gateway \
+      promtail-service:latest > /dev/null; then
+    log_success "Promtail container started."
+  else
+    log_error "Failed to start Promtail container."
+    return 1
+  fi
+  
+  wait_for_promtail
+}
+
+# Function to wait for Promtail readiness
+wait_for_promtail() {
+  local retries=15
+  local delay=2
+  log_step "Waiting for Promtail readiness..."
+  
+  while (( retries > 0 )); do
+    if curl -f "http://localhost:${PROMTAIL_PORT}/ready" >/dev/null 2>&1; then
+      log_success "Promtail is ready."
+      return 0
+    fi
+    retries=$((retries - 1))
+    sleep "$delay"
+    echo -n "."
+  done
+  
+  echo ""
+  log_error "Promtail did not become ready in time."
+  docker logs promtail-service 2>/dev/null | tail -n 10
+  return 1
+}
+
 # Function to start Prometheus
 start_prometheus() {
   log_step "Starting Prometheus..."
@@ -253,9 +370,11 @@ start_observability_stack() {
   
   ensure_docker_network
   
-  # Start in order: OTEL Collector, Tempo, Prometheus, then Grafana
+  # Start in order: OTEL Collector, Tempo, Loki, Promtail, Prometheus, then Grafana
   start_otel_collector || return 1
   start_tempo || return 1
+  start_loki || return 1
+  start_promtail || return 1
   start_prometheus || return 1
   start_grafana || return 1
   
@@ -266,6 +385,8 @@ start_observability_stack() {
      - HTTP: localhost:${OTEL_COLLECTOR_HTTP_PORT}
      - Health: localhost:${OTEL_COLLECTOR_HEALTH_PORT}
   🔍 Tempo: localhost:${TEMPO_API_PORT}
+  📝 Loki: localhost:${LOKI_PORT}
+  📤 Promtail: localhost:${PROMTAIL_PORT}
   📊 Prometheus: http://localhost:${PROMETHEUS_PORT}
   📊 Grafana: http://localhost:${GRAFANA_PORT} (admin/admin)"
 }
@@ -276,6 +397,8 @@ stop_observability_stack() {
   
   stop_container "grafana-service"
   stop_container "prometheus-service"
+  stop_container "promtail-service"
+  stop_container "loki-service"
   stop_container "tempo-service" 
   stop_container "otel-collector-service"
   

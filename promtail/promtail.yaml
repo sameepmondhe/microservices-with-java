@@ -1,0 +1,92 @@
+server:
+  http_listen_port: 9080
+  grpc_listen_port: 0
+
+positions:
+  filename: /tmp/positions.yaml
+
+clients:
+  - url: http://loki-service:3100/loki/api/v1/push
+
+scrape_configs:
+  # Docker container logs scraping
+  - job_name: containers
+    docker_sd_configs:
+      - host: unix:///var/run/docker.sock
+        refresh_interval: 5s
+        filters:
+          - name: label
+            values: ["logging=promtail"]
+    relabel_configs:
+      # Extract container name
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.*)' 
+        target_label: 'container_name'
+      # Extract service name from container name
+      - source_labels: ['__meta_docker_container_name']
+        regex: '/(.+?)(-.*)?$'
+        target_label: 'service'
+      # Set log path
+      - source_labels: ['__meta_docker_container_log_stream']
+        target_label: 'stream'
+    pipeline_stages:
+      # Parse JSON logs from Spring Boot
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            thread: thread
+            logger: logger
+            message: message
+            trace_id: traceId
+            span_id: spanId
+      # Extract timestamp
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02T15:04:05.000-0700'
+      # Set log level label
+      - labels:
+          level:
+          trace_id:
+          span_id:
+          service:
+      # Template for better log formatting
+      - template:
+          source: output
+          template: '{{ .timestamp }} [{{ .level }}] [{{ .service }}] [{{ .trace_id }}] {{ .logger }} - {{ .message }}'
+      # Output the formatted log
+      - output:
+          source: output
+
+  # Static configuration for microservices logs
+  - job_name: microservices
+    static_configs:
+      - targets:
+          - localhost
+        labels:
+          job: microservices
+          __path__: /var/log/containers/*.log
+    pipeline_stages:
+      # Parse container logs
+      - regex:
+          expression: '^(?P<timestamp>\S+) (?P<stream>stdout|stderr) \S (?P<content>.*)$'
+      # Parse JSON content from Spring Boot applications
+      - json:
+          expressions:
+            timestamp: timestamp
+            level: level
+            thread: thread
+            logger: logger
+            message: message
+            trace_id: traceId
+            span_id: spanId
+          source: content
+      # Extract timestamp
+      - timestamp:
+          source: timestamp
+          format: '2006-01-02T15:04:05.000-0700'
+      # Set labels for filtering
+      - labels:
+          level:
+          trace_id:
+          span_id:

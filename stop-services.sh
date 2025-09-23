@@ -85,6 +85,8 @@ stop_local_service 8888 "config-server" || echo "  ⚠️ Failed to stop config-
 echo -e "\n🛑 Stopping microservices running in Docker containers..."
 stop_container "otel-collector-service" || echo "  ⚠️ Failed to stop otel-collector-service, continuing..."
 stop_container "tempo-service" || echo "  ⚠️ Failed to stop tempo-service, continuing..."
+stop_container "loki-service" || echo "  ⚠️ Failed to stop loki-service, continuing..."
+stop_container "promtail-service" || echo "  ⚠️ Failed to stop promtail-service, continuing..."
 stop_container "prometheus-service" || echo "  ⚠️ Failed to stop prometheus-service, continuing..."
 stop_container "grafana-service" || echo "  ⚠️ Failed to stop grafana-service, continuing..."
 stop_container "eureka-server-service" || echo "  ⚠️ Failed to stop eureka-server-service, continuing..."
@@ -103,6 +105,6 @@ else
   echo "  No microservices network found"
 fi
 
-echo -e "\nℹ️ Observability stack removal logic skipped (stack not in this baseline)."
+echo -e "\nℹ️ All observability components (OTEL Collector, Tempo, Loki, Promtail, Prometheus, Grafana) stopped."
 
 echo -e "\n🎉 All services have been stopped!"

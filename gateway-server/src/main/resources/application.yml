@@ -37,6 +37,17 @@ spring:
           filters:
             - RewritePath=/gateway(?<segment>/?.*), $\{segment}
 
+# Structured Logging Configuration
+logging:
+  config: classpath:logback-spring.xml
+  pattern:
+    console: ""  # Disable default pattern, use JSON from logback config
+  level:
+    com.example.gateway: INFO
+    org.springframework.cloud.gateway: INFO
+    org.springframework.web: INFO
+    root: INFO
+
 server:
   port: 8072
 

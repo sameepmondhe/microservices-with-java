@@ -1,0 +1,118 @@
+groups:
+  - name: banking_services_alerts
+    rules:
+      # Service availability alerts
+      - alert: ServiceDown
+        expr: up{job=~".*-service"} == 0
+        for: 30s
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Banking service {{ $labels.job }} is down"
+          description: "Service {{ $labels.job }} has been down for more than 30 seconds."
+          
+      - alert: HighErrorRate
+        expr: (sum(rate(http_server_requests_seconds_count{job=~".*-service", status=~"5.."}[5m])) by (job) / sum(rate(http_server_requests_seconds_count{job=~".*-service"}[5m])) by (job)) * 100 > 5
+        for: 2m
+        labels:
+          severity: warning
+          team: development
+        annotations:
+          summary: "High error rate detected for {{ $labels.job }}"
+          description: "Error rate for {{ $labels.job }} is {{ $value }}% which is above the 5% threshold."
+          
+      - alert: HighResponseTime
+        expr: histogram_quantile(0.95, sum(rate(http_server_requests_seconds_bucket{job=~".*-service"}[5m])) by (le, job)) > 2.0
+        for: 5m
+        labels:
+          severity: warning
+          team: development
+        annotations:
+          summary: "High response time for {{ $labels.job }}"
+          description: "95th percentile response time for {{ $labels.job }} is {{ $value }}s which is above 2s threshold."
+          
+      # Resource alerts
+      - alert: HighMemoryUsage
+        expr: (jvm_memory_used_bytes{job=~".*-service", area="heap"} / jvm_memory_max_bytes{job=~".*-service", area="heap"}) * 100 > 80
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High memory usage for {{ $labels.job }}"
+          description: "Memory usage for {{ $labels.job }} is {{ $value }}% which is above 80% threshold."
+          
+      - alert: HighCPUUsage
+        expr: rate(process_cpu_usage{job=~".*-service"}[5m]) > 0.8
+        for: 5m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "High CPU usage for {{ $labels.job }}"
+          description: "CPU usage for {{ $labels.job }} is {{ $value | humanizePercentage }} which is above 80% threshold."
+          
+      # Business metrics alerts
+      - alert: LowTransactionVolume
+        expr: sum(rate(http_server_requests_seconds_count{job=~".*-service", uri=~"/api/.*", status=~"2.."}[10m])) < 0.1
+        for: 10m
+        labels:
+          severity: warning
+          team: business
+        annotations:
+          summary: "Low transaction volume across banking services"
+          description: "Transaction rate is {{ $value }} requests/second which is unusually low."
+          
+      - alert: DatabaseConnectionIssues
+        expr: increase(http_server_requests_seconds_count{job=~".*-service", status="503"}[5m]) > 10
+        for: 2m
+        labels:
+          severity: critical
+          team: database
+        annotations:
+          summary: "Potential database connection issues"
+          description: "Seeing {{ $value }} 503 errors in the last 5 minutes, indicating potential database connectivity issues."
+
+  - name: observability_stack_alerts
+    rules:
+      # Observability infrastructure alerts
+      - alert: PrometheusDown
+        expr: up{job="prometheus"} == 0
+        for: 1m
+        labels:
+          severity: critical
+          team: platform
+        annotations:
+          summary: "Prometheus is down"
+          description: "Prometheus has been down for more than 1 minute. Monitoring is compromised."
+          
+      - alert: GrafanaDown
+        expr: up{job="grafana"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Grafana is down"
+          description: "Grafana has been down for more than 1 minute. Dashboard access is compromised."
+          
+      - alert: LokiDown
+        expr: up{job="loki"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Loki is down"
+          description: "Loki has been down for more than 1 minute. Log aggregation is compromised."
+          
+      - alert: TempoDown
+        expr: up{job="tempo"} == 0
+        for: 1m
+        labels:
+          severity: warning
+          team: platform
+        annotations:
+          summary: "Tempo is down"
+          description: "Tempo has been down for more than 1 minute. Distributed tracing is compromised."

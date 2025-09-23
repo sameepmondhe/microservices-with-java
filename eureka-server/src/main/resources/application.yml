@@ -2,6 +2,17 @@ spring:
   application:
     name: eureka-server
 
+# Structured Logging Configuration
+logging:
+  config: classpath:logback-spring.xml
+  pattern:
+    console: ""  # Disable default pattern, use JSON from logback config
+  level:
+    com.netflix.eureka: INFO
+    com.netflix.discovery: INFO
+    org.springframework.web: INFO
+    root: INFO
+
 server:
   port: 8761
   address: 0.0.0.0

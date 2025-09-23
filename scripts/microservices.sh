@@ -91,6 +91,8 @@ start_docker_service() {
   if docker run -d --name "${service_name}-service" \
       --network microservices-network \
       -p "$port:$port" \
+      --label "logging=promtail" \
+      --label "service=${service_name}" \
       --add-host=host.docker.internal:host-gateway \
       "$image_name" > /dev/null; then
     log_success "$service_name container started."

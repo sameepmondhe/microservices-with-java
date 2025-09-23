@@ -1,5 +1,24 @@
+# ============================================================================
+# HYBRID MICROSERVICES ARCHITECTURE REFERENCE
+# ============================================================================
+# 
+# IMPORTANT: This docker-compose.yml file is NOT used for actual deployment.
+# It serves as documentation for the service definitions.
+#
+# ACTUAL DEPLOYMENT APPROACH:
+# - config-server: Runs LOCALLY as JAR (port 8888)
+# - All other services: Run as DOCKER CONTAINERS with individual Dockerfiles
+# - Orchestration: Uses ./start-services-new.sh script
+# - Observability: Loki, Promtail, Tempo, Prometheus, Grafana via scripts
+#
+# ============================================================================
+
 services:
   # config-server:
+  #   NOTE: config-server runs LOCALLY as JAR, not in Docker
+  #   Started via: scripts/microservices.sh -> start_local_service()
+  #   Port: 8888
+  #   Purpose: Provides centralized configuration to other services
   #   build:
   #     context: .
   #     dockerfile: config-server/Dockerfile
@@ -15,7 +34,19 @@ services:
   #   networks:
   #     - msnet
 
+  # ============================================================================
+  # MICROSERVICES - Docker Container Deployment
+  # ============================================================================
+  # NOTE: These services are deployed via individual Docker builds, not this compose file
+  # Actual deployment: scripts/microservices.sh -> start_docker_service()
+  # Each service uses its own Dockerfile with OpenTelemetry integration
+  # Logging labels: "logging=promtail" and "service=${service_name}" for log discovery
+  # ============================================================================
+
   accounts:
+    # DEPLOYED VIA: docker build -t accounts-service:latest ./accounts
+    # LABELS: logging=promtail, service=accounts (for Promtail log discovery)
+    # OTEL: Integrated with traces sent to otel-collector-service:4318
     build:
       context: ./accounts
       dockerfile: Dockerfile
@@ -24,6 +55,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
+    labels:
+      - logging=promtail
+      - service=accounts
     # depends_on:
     #   - config-server
     healthcheck:
@@ -43,6 +77,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
+    labels:
+      - logging=promtail
+      - service=cards
     # depends_on:
     #   - config-server
     healthcheck:
@@ -62,6 +99,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
+    labels:
+      - logging=promtail
+      - service=loans
     # depends_on:
     #   - config-server
     healthcheck:
@@ -73,6 +113,9 @@ services:
       - msnet
 
   customer:
+    # DEPLOYED VIA: docker build -t customers-service:latest ./customers  
+    # LABELS: logging=promtail, service=customers (for Promtail log discovery)
+    # OTEL: Integrated with traces sent to otel-collector-service:4318
     build:
       context: ./customer
       dockerfile: Dockerfile
@@ -81,6 +124,9 @@ services:
     environment:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
+    labels:
+      - logging=promtail
+      - service=customers
     # depends_on:
     #   - config-server
     healthcheck:
@@ -92,6 +138,9 @@ services:
       - msnet
 
   otel-collector:
+    # NOTE: This OTEL Collector definition is also NOT used
+    # DEPLOYED VIA: scripts/observability.sh -> start_otel_collector()
+    # Actual deployment uses individual Docker build approach
     image: otel/opentelemetry-collector:0.109.0
     container_name: otel-collector
     volumes:
@@ -112,4 +161,33 @@ services:
 networks:
   msnet:
     driver: bridge
+
+# ============================================================================
+# ACTUAL DEPLOYMENT ARCHITECTURE SUMMARY
+# ============================================================================
+#
+# LOCAL SERVICES (JAR deployment):
+# ├── config-server:8888      → Central configuration
+#
+# DOCKER SERVICES (Container deployment):
+# ├── eureka-server:8761       → Service discovery  
+# ├── accounts:8081           → Account management
+# ├── cards:8082              → Card management  
+# ├── loans:8083              → Loan management
+# ├── customers:8084          → Customer management
+# └── gateway-server:8072     → API gateway
+#
+# OBSERVABILITY STACK (Container deployment):
+# ├── otel-collector:4317/4318 → Trace collection
+# ├── tempo:3200               → Trace storage
+# ├── loki:3100               → Log aggregation  
+# ├── promtail:9080           → Log shipping
+# ├── prometheus:9090         → Metrics collection
+# └── grafana:3000            → Visualization
+#
+# DEPLOYMENT COMMANDS:
+# - Start: ./start-services-new.sh
+# - Stop:  ./stop-services.sh
+#
+# ============================================================================
 

@@ -14,6 +14,16 @@ spring:
     bus:
       enabled: false
 
+# Structured Logging Configuration
+logging:
+  config: classpath:logback-spring.xml
+  pattern:
+    console: ""  # Disable default pattern, use JSON from logback config
+  level:
+    org.springframework.cloud.config: INFO
+    org.springframework.web: INFO
+    root: INFO
+
 management:
   endpoints:
     web:

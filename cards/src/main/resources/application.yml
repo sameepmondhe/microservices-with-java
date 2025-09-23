@@ -10,6 +10,17 @@ spring:
       host: host.docker.internal
       port: 27017
 
+# Structured Logging Configuration
+logging:
+  config: classpath:logback-spring.xml
+  pattern:
+    console: ""  # Disable default pattern, use JSON from logback config
+  level:
+    com.example.cards: INFO
+    org.springframework.web: INFO
+    org.springframework.security: INFO
+    root: INFO
+
 server:
   port: 8082
   address: 0.0.0.0

@@ -6,7 +6,7 @@
         <!-- Development: JSON-like structured logging with trace correlation -->
         <appender name="STDOUT" class="ch.qos.logback.core.ConsoleAppender">
             <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","service":"accounts","logger":"%logger{36}","thread":"%thread","message":"%replace(%msg){'\"','\\\\"'}","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","exception":"%replace(%ex){'\"','\\\\"'}"}%n</pattern>
+                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","service":"config-server","logger":"%logger{36}","thread":"%thread","message":"%replace(%msg){'\"','\\\\"'}","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","exception":"%replace(%ex){'\"','\\\\"'}"}%n</pattern>
             </encoder>
         </appender>
         
@@ -18,13 +18,13 @@
     <springProfile name="prod">
         <!-- Production: Same structured format but to file -->
         <appender name="FILE" class="ch.qos.logback.core.rolling.RollingFileAppender">
-            <file>logs/accounts.log</file>
+            <file>logs/config-server.log</file>
             <rollingPolicy class="ch.qos.logback.core.rolling.TimeBasedRollingPolicy">
-                <fileNamePattern>logs/accounts.%d{yyyy-MM-dd}.log</fileNamePattern>
+                <fileNamePattern>logs/config-server.%d{yyyy-MM-dd}.log</fileNamePattern>
                 <maxHistory>30</maxHistory>
             </rollingPolicy>
             <encoder class="ch.qos.logback.classic.encoder.PatternLayoutEncoder">
-                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","service":"accounts","logger":"%logger{36}","thread":"%thread","message":"%replace(%msg){'\"','\\\\"'}","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","exception":"%replace(%ex){'\"','\\\\"'}"}%n</pattern>
+                <pattern>{"timestamp":"%d{yyyy-MM-dd'T'HH:mm:ss.SSSZ}","level":"%level","service":"config-server","logger":"%logger{36}","thread":"%thread","message":"%replace(%msg){'\"','\\\\"'}","traceId":"%X{traceId:-}","spanId":"%X{spanId:-}","exception":"%replace(%ex){'\"','\\\\"'}"}%n</pattern>
             </encoder>
         </appender>
         
