@@ -3,6 +3,11 @@
 # Removed 'set -e' to prevent the script from exiting on errors
 # Instead, we'll handle errors more gracefully
 
+# Get script directory and source required scripts
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+source "$SCRIPT_DIR/scripts/common.sh"
+source "$SCRIPT_DIR/scripts/observability.sh"
+
 echo "🔄 Stopping all microservices..."
 
 # Function to stop a local Java process running on a specific port
@@ -81,14 +86,11 @@ stop_container() {
 echo "🛑 Stopping config-server..."
 stop_local_service 8888 "config-server" || echo "  ⚠️ Failed to stop config-server, continuing..."
 
-# Stop Docker containers (no need to kill ports since they're containerized)
-echo -e "\n🛑 Stopping microservices running in Docker containers..."
-stop_container "otel-collector-service" || echo "  ⚠️ Failed to stop otel-collector-service, continuing..."
-stop_container "tempo-service" || echo "  ⚠️ Failed to stop tempo-service, continuing..."
-stop_container "loki-service" || echo "  ⚠️ Failed to stop loki-service, continuing..."
-stop_container "promtail-service" || echo "  ⚠️ Failed to stop promtail-service, continuing..."
-stop_container "prometheus-service" || echo "  ⚠️ Failed to stop prometheus-service, continuing..."
-stop_container "grafana-service" || echo "  ⚠️ Failed to stop grafana-service, continuing..."
+# Stop Docker containers using observability stack function
+echo -e "\n🛑 Stopping observability stack..."
+stop_observability_stack || echo "  ⚠️ Some observability services may have failed to stop, continuing..."
+
+echo -e "\n🛑 Stopping microservices..."
 stop_container "eureka-server-service" || echo "  ⚠️ Failed to stop eureka-server-service, continuing..."
 stop_container "accounts-service" || echo "  ⚠️ Failed to stop accounts-service, continuing..."
 stop_container "cards-service" || echo "  ⚠️ Failed to stop cards-service, continuing..."
@@ -105,6 +107,6 @@ else
   echo "  No microservices network found"
 fi
 
-echo -e "\nℹ️ All observability components (OTEL Collector, Tempo, Loki, Promtail, Prometheus, Grafana) stopped."
+echo -e "\nℹ️ All observability components (OTEL Collector, Tempo, Loki, Promtail, Alloy, Prometheus, Grafana) stopped."
 
 echo -e "\n🎉 All services have been stopped!"

@@ -6,6 +6,7 @@ import com.example.accounts.service.OnboardingService;
 import com.example.accounts.dto.OnboardingRequest;
 import com.example.accounts.dto.OnboardingResponse;
 import com.example.accounts.tracing.BusinessContextTracer;
+import com.example.accounts.analytics.CustomerAnalyticsPublisher;
 import io.micrometer.core.annotation.Timed;
 import io.micrometer.core.instrument.Counter;
 import io.opentelemetry.api.trace.Span;
@@ -32,6 +33,9 @@ public class AccountController {
 
     @Autowired
     private BusinessContextTracer businessContextTracer;
+
+    @Autowired
+    private CustomerAnalyticsPublisher customerAnalyticsPublisher;
 
     // Custom metrics - injected from MetricsConfig
     @Autowired
@@ -120,6 +124,21 @@ public class AccountController {
             businessContextTracer.addBusinessAttributes(
                 businessContextTracer.createContext()
                     .accountId(createdAccount.getAccountId())
+            );
+            
+            // 🎯 CUSTOMER ANALYTICS: Publish account creation event
+            Double balanceAmount = null;
+            try {
+                balanceAmount = account.getAccountBalance() != null ? 
+                    Double.parseDouble(account.getAccountBalance()) : 0.0;
+            } catch (NumberFormatException e) {
+                balanceAmount = 0.0;
+            }
+            
+            customerAnalyticsPublisher.publishAccountCreationEvent(
+                account.getCustomerId(),
+                account.getAccountType(),
+                balanceAmount
             );
             
             // Record successful creation

@@ -30,8 +30,12 @@ PROMETHEUS_PORT=9090
 LOKI_PORT=3100
 LOKI_GRPC_PORT=9096
 
-# Promtail configuration  
-PROMTAIL_PORT=9080
+# Unified Alloy configuration (fully replaced Promtail)
+ALLOY_PORT=12345
+
+# Customer Analytics API port (integrated into unified Alloy)
+CUSTOMER_ANALYTICS_PORT=12346
+CUSTOMER_ANALYTICS_METRICS_PORT=12347
 
 GRAFANA_PORT=3000
 
@@ -205,48 +209,52 @@ wait_for_loki() {
   return 1
 }
 
-# Function to start Promtail
-start_promtail() {
-  log_step "Starting Promtail..."
+# Promtail functions removed - fully replaced by unified Alloy
+
+# Function to start Unified Alloy (replaces Promtail entirely)
+start_alloy() {
+  log_step "Starting Unified Grafana Alloy (replacing Promtail)..."
   
-  ensure_port_free "$PROMTAIL_PORT" "promtail"
+  ensure_port_free "$ALLOY_PORT" "alloy"
+  ensure_port_free "$CUSTOMER_ANALYTICS_PORT" "alloy-customer-api"
   
-  stop_container "promtail-service"
+  stop_container "alloy-unified"
   
-  log_step "Building Promtail image..."
-  if (cd "$REPO_ROOT" && docker build -t promtail-service:latest ./promtail > /dev/null 2>&1); then
-    log_success "Promtail image built."
+  log_step "Building Unified Alloy image..."
+  if (cd "$REPO_ROOT" && docker build -t alloy-unified:latest ./alloy/unified > /dev/null 2>&1); then
+    log_success "Unified Alloy image built."
   else
-    log_error "Failed to build Promtail image."
+    log_error "Failed to build Unified Alloy image."
     return 1
   fi
   
-  log_step "Starting Promtail container..."
-  if docker run -d --name "promtail-service" \
+  log_step "Starting Unified Alloy container..."
+  if docker run -d --name "alloy-unified" \
       --network microservices-network \
-      -p "${PROMTAIL_PORT}:9080" \
+      -p "${ALLOY_PORT}:12345" \
+      -p "${CUSTOMER_ANALYTICS_PORT}:12346" \
       -v /var/run/docker.sock:/var/run/docker.sock:ro \
       -v /var/lib/docker/containers:/var/lib/docker/containers:ro \
       --add-host=host.docker.internal:host-gateway \
-      promtail-service:latest > /dev/null; then
-    log_success "Promtail container started."
+      alloy-unified:latest > /dev/null; then
+    log_success "Unified Alloy container started."
   else
-    log_error "Failed to start Promtail container."
+    log_error "Failed to start Unified Alloy container."
     return 1
   fi
   
-  wait_for_promtail
+  wait_for_alloy
 }
 
-# Function to wait for Promtail readiness
-wait_for_promtail() {
+# Function to wait for Alloy readiness
+wait_for_alloy() {
   local retries=15
   local delay=2
-  log_step "Waiting for Promtail readiness..."
+  log_step "Waiting for Alloy readiness..."
   
   while (( retries > 0 )); do
-    if curl -f "http://localhost:${PROMTAIL_PORT}/ready" >/dev/null 2>&1; then
-      log_success "Promtail is ready."
+    if curl -f "http://localhost:${ALLOY_PORT}/-/ready" >/dev/null 2>&1; then
+      log_success "Alloy is ready."
       return 0
     fi
     retries=$((retries - 1))
@@ -255,8 +263,66 @@ wait_for_promtail() {
   done
   
   echo ""
-  log_error "Promtail did not become ready in time."
-  docker logs promtail-service 2>/dev/null | tail -n 10
+  log_error "Alloy did not become ready in time."
+  docker logs alloy-service 2>/dev/null | tail -n 10
+  return 1
+}
+
+# Function to start Customer Analytics Engine (Alloy-based)
+start_customer_analytics() {
+  log_step "Starting Customer Analytics Engine..."
+  
+  ensure_port_free "$CUSTOMER_ANALYTICS_PORT" "customer-analytics-api"
+  ensure_port_free "$CUSTOMER_ANALYTICS_METRICS_PORT" "customer-analytics-metrics"
+  
+  stop_container "alloy-customer-analytics"
+  
+  log_step "Building Customer Analytics image..."
+  if (cd "$REPO_ROOT" && docker build -t alloy-customer-analytics:latest ./alloy/customer-analytics > /dev/null 2>&1); then
+    log_success "Customer Analytics image built."
+  else
+    log_error "Failed to build Customer Analytics image."
+    return 1
+  fi
+  
+  log_step "Starting Customer Analytics container..."
+  if docker run -d --name "alloy-customer-analytics" \
+      --network microservices-network \
+      -p "${CUSTOMER_ANALYTICS_PORT}:12346" \
+      -p "${CUSTOMER_ANALYTICS_METRICS_PORT}:12345" \
+      --add-host=host.docker.internal:host-gateway \
+      -e CUSTOMER_ANALYTICS_ENABLED=true \
+      -e LOKI_ENDPOINT=http://loki-service:3100 \
+      -e PROMETHEUS_ENDPOINT=http://prometheus-service:9090 \
+      alloy-customer-analytics:latest > /dev/null; then
+    log_success "Customer Analytics container started."
+  else
+    log_error "Failed to start Customer Analytics container."
+    return 1
+  fi
+  
+  wait_for_customer_analytics
+}
+
+# Function to wait for Customer Analytics readiness
+wait_for_customer_analytics() {
+  local retries=15
+  local delay=2
+  log_step "Waiting for Customer Analytics readiness..."
+  
+  while (( retries > 0 )); do
+    if curl -f "http://localhost:${CUSTOMER_ANALYTICS_METRICS_PORT}/-/ready" >/dev/null 2>&1; then
+      log_success "Customer Analytics is ready."
+      return 0
+    fi
+    retries=$((retries - 1))
+    sleep "$delay"
+    echo -n "."
+  done
+  
+  echo ""
+  log_error "Customer Analytics did not become ready in time."
+  docker logs alloy-customer-analytics 2>/dev/null | tail -n 10
   return 1
 }
 
@@ -370,11 +436,17 @@ start_observability_stack() {
   
   ensure_docker_network
   
-  # Start in order: OTEL Collector, Tempo, Loki, Promtail, Prometheus, then Grafana
+  # Start in order: OTEL Collector, Tempo, Loki, Unified Alloy (replaces Promtail), Prometheus, then Grafana
   start_otel_collector || return 1
   start_tempo || return 1
   start_loki || return 1
-  start_promtail || return 1
+  
+  # Start Unified Alloy (replaces Promtail entirely)
+  start_alloy || {
+    log_error "Unified Alloy failed to start - this is critical for log collection"
+    return 1
+  }
+  
   start_prometheus || return 1
   start_grafana || return 1
   
@@ -386,7 +458,8 @@ start_observability_stack() {
      - Health: localhost:${OTEL_COLLECTOR_HEALTH_PORT}
   🔍 Tempo: localhost:${TEMPO_API_PORT}
   📝 Loki: localhost:${LOKI_PORT}
-  📤 Promtail: localhost:${PROMTAIL_PORT}
+  🤖 Unified Alloy: localhost:${ALLOY_PORT} (Modern log collection + processing)
+     - Customer Events API: localhost:${CUSTOMER_ANALYTICS_PORT}
   📊 Prometheus: http://localhost:${PROMETHEUS_PORT}
   📊 Grafana: http://localhost:${GRAFANA_PORT} (admin/admin)"
 }
@@ -397,7 +470,7 @@ stop_observability_stack() {
   
   stop_container "grafana-service"
   stop_container "prometheus-service"
-  stop_container "promtail-service"
+  stop_container "alloy-unified"
   stop_container "loki-service"
   stop_container "tempo-service" 
   stop_container "otel-collector-service"

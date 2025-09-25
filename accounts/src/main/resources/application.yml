@@ -64,3 +64,9 @@ management:
   tracing:
     sampling:
       probability: 1.0
+
+# 🎯 Customer Analytics Configuration
+customer:
+  analytics:
+    enabled: true
+    endpoint: http://alloy-customer-analytics:12346/loki/api/v1/push

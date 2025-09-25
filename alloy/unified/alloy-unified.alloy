@@ -1,0 +1,379 @@
+// ============================================================================
+// UNIFIED ALLOY CONFIGURATION - REPLACING PROMTAIL
+// Modern observability data pipeline for microservices-with-java
+// ============================================================================
+
+// ============================================================================
+// DISCOVERY COMPONENTS - Find what to monitor
+// ============================================================================
+
+// Discover all Docker containers running on this host
+discovery.docker "containers" {
+    host = "unix:///var/run/docker.sock"
+}
+
+// ============================================================================
+// LOG COLLECTION SOURCES - Where data comes from
+// ============================================================================
+
+// Primary log collection from Docker containers
+// This replaces Promtail's docker log collection
+loki.source.docker "microservices" {
+    host       = "unix:///var/run/docker.sock"
+    targets    = discovery.docker.containers.targets
+    forward_to = [loki.process.banking_enrichment.receiver]
+    
+    // Only collect logs from our banking microservices
+    relabel_rules = loki.relabel.service_filter.rules
+}
+
+// ============================================================================
+// LABEL PROCESSING - Clean and organize labels
+// ============================================================================
+
+// Filter and enhance container labels for banking services
+loki.relabel "service_filter" {
+    forward_to = []
+    
+    rule {
+        source_labels = ["__meta_docker_container_name"]
+        target_label  = "container_name"
+    }
+    
+    rule {
+        source_labels = ["__meta_docker_container_name"]
+        regex         = "/(accounts|cards|loans|customers|gateway-server|eureka-server|config-server)-.*"
+        target_label  = "service"
+        replacement   = "${1}"
+    }
+    
+    rule {
+        source_labels = ["__meta_docker_container_label_app"]
+        target_label  = "app"
+    }
+    
+    rule {
+        source_labels = ["service"]
+        regex         = "accounts|cards|loans|customers"
+        target_label  = "service_type"
+        replacement   = "business_service"
+    }
+    
+    rule {
+        source_labels = ["service"]
+        regex         = "gateway-server|eureka-server|config-server"
+        target_label  = "service_type"
+        replacement   = "infrastructure_service"
+    }
+    
+    rule {
+        target_label = "environment"
+        replacement  = "dev"
+    }
+    
+    rule {
+        target_label = "cluster"
+        replacement  = "banking-microservices"
+    }
+}
+
+// ============================================================================
+// LOG PROCESSING - Parse and enrich log data
+// ============================================================================
+
+// Main log processing pipeline with banking-specific enhancements
+loki.process "banking_enrichment" {
+    forward_to = [loki.write.primary.receiver]
+    
+    // ========================================================================
+    // STAGE 1: Extract log level from all services
+    // ========================================================================
+    stage.regex {
+        expression = "(?P<level>TRACE|DEBUG|INFO|WARN|ERROR|FATAL)"
+    }
+    
+    stage.labels {
+        values = {
+            level = "level",
+        }
+    }
+    
+    // ========================================================================
+    // STAGE 2: Parse JSON structured logs from Spring Boot services
+    // ========================================================================
+    stage.match {
+        selector = `{service_type="business_service"}`
+        
+        // Parse JSON logs from business services
+        stage.json {
+            expressions = {
+                logger_name = "logger",
+                thread_name = "thread",
+                message = "message",
+                mdc_trace_id = "mdc.traceId",
+                mdc_span_id = "mdc.spanId",
+            }
+        }
+        
+        // Extract banking business context if present
+        stage.json {
+            expressions = {
+                customer_id = "businessContext.customerId",
+                customer_tier = "businessContext.customerTier",
+                transaction_type = "businessContext.transactionType",
+                account_type = "businessContext.accountType",
+                compliance_flag = "businessContext.complianceRequired",
+            }
+        }
+        
+        // Add business context labels for high-value events
+        stage.match {
+            selector = `{customer_tier="PREMIUM"}`
+            stage.labels {
+                values = {
+                    priority = "high",
+                    alert_tier = "premium_customer",
+                }
+            }
+        }
+        
+        stage.match {
+            selector = `{compliance_flag="true"}`
+            stage.labels {
+                values = {
+                    compliance = "required",
+                    audit_flag = "true",
+                }
+            }
+        }
+    }
+    
+    // ========================================================================
+    // STAGE 3: Parse infrastructure service logs
+    // ========================================================================
+    stage.match {
+        selector = `{service_type="infrastructure_service"}`
+        
+        // Eureka registration events
+        stage.match {
+            selector = `{service="eureka-server"}`
+            stage.regex {
+                expression = "Registered instance (?P<registered_service>[A-Z-]+)"
+            }
+            stage.labels {
+                values = {
+                    event_type = "service_registration",
+                    registered_service = "",
+                }
+            }
+        }
+        
+        // Gateway routing logs
+        stage.match {
+            selector = `{service="gateway-server"}`
+            stage.regex {
+                expression = "Route matched: (?P<route_id>[a-z-]+)"
+            }
+            stage.labels {
+                values = {
+                    event_type = "route_match",
+                    route_id = "",
+                }
+            }
+        }
+        
+        // Config server events
+        stage.match {
+            selector = `{service="config-server"}`
+            stage.regex {
+                expression = "Located property source.*?(?P<config_profile>[a-z-]+)\\.yml"
+            }
+            stage.labels {
+                values = {
+                    event_type = "config_fetch",
+                    config_profile = "",
+                }
+            }
+        }
+    }
+    
+    // ========================================================================
+    // STAGE 4: Error pattern detection and alerting labels
+    // ========================================================================
+    stage.match {
+        selector = `{level="ERROR"}`
+        
+        // Database connection errors
+        stage.regex {
+            expression = "(Connection.*refused|Connection.*timeout|SQLException)"
+        }
+        stage.labels {
+            values = {
+                error_category = "database",
+                alert_severity = "critical",
+            }
+        }
+        
+        // Service communication errors
+        stage.regex {
+            expression = "(feign\\.RetryableException|ConnectException|SocketTimeoutException)"
+        }
+        stage.labels {
+            values = {
+                error_category = "service_communication",
+                alert_severity = "high",
+            }
+        }
+        
+        // Business logic errors
+        stage.regex {
+            expression = "(InsufficientFundsException|AccountNotFoundException|InvalidTransactionException)"
+        }
+        stage.labels {
+            values = {
+                error_category = "business_logic",
+                alert_severity = "medium",
+            }
+        }
+    }
+    
+    // ========================================================================
+    // STAGE 5: Performance monitoring patterns
+    // ========================================================================
+    stage.regex {
+        expression = "Request processing time: (?P<response_time>\\d+)ms"
+    }
+    
+    stage.match {
+        selector = `{response_time=~"[5-9][0-9]{3,}|[1-9][0-9]{4,}"}` // 5+ seconds
+        stage.labels {
+            values = {
+                performance_flag = "slow_request",
+                alert_severity = "medium",
+            }
+        }
+    }
+    
+    // ========================================================================
+    // STAGE 6: Transaction tracking for banking operations
+    // ========================================================================
+    stage.regex {
+        expression = "Transaction (?P<transaction_status>started|completed|failed).*?ID: (?P<transaction_id>[a-f0-9-]+)"
+    }
+    stage.labels {
+        values = {
+            transaction_status = "transaction_status",
+            transaction_id = "transaction_id",
+            event_type = "transaction_lifecycle",
+        }
+    }
+}
+
+// ============================================================================
+// OUTPUT SINKS - Where processed data goes
+// ============================================================================
+
+// Primary Loki destination (replaces Promtail's output)
+loki.write "primary" {
+    endpoint {
+        url = "http://loki:3100/loki/api/v1/push"
+        
+        // Optional: Add tenant isolation
+        headers = {
+            "X-Scope-OrgID" = "banking-microservices",
+        }
+    }
+    
+    // Performance tuning
+    external_labels = {
+        cluster = "banking-dev",
+        pipeline = "alloy-unified",
+    }
+}
+
+// ============================================================================
+// CUSTOMER ANALYTICS INTEGRATION
+// ============================================================================
+
+// HTTP endpoint for receiving customer events from applications
+loki.source.api "customer_events" {
+    http {
+        listen_address = "0.0.0.0"
+        listen_port    = 12346
+    }
+    forward_to = [loki.process.customer_analytics.receiver]
+    labels = {
+        source = "customer_api",
+        event_type = "customer_analytics",
+    }
+}
+
+// Process customer analytics events
+loki.process "customer_analytics" {
+    forward_to = [loki.write.primary.receiver]
+    
+    stage.json {
+        expressions = {
+            customer_id = "customerId",
+            event_type = "eventType",
+            product_type = "productType",
+            channel = "channel",
+            amount = "amount",
+            risk_score = "riskScore",
+        }
+    }
+    
+    // Categorize customer events
+    stage.match {
+        selector = `{event_type="high_value_transaction"}`
+        stage.labels {
+            values = {
+                alert_tier = "high_value",
+                compliance = "required",
+            }
+        }
+    }
+    
+    stage.match {
+        selector = `{risk_score=~"[7-9][0-9]|100"}` // Risk score 70+
+        stage.labels {
+            values = {
+                risk_category = "high_risk",
+                alert_severity = "high",
+            }
+        }
+    }
+}
+
+// ============================================================================
+// HEALTH AND MONITORING
+// ============================================================================
+
+// Export metrics about the Alloy pipeline itself
+prometheus.exporter.self "alloy_metrics" { }
+
+// Expose metrics for Prometheus scraping
+prometheus.scrape "self_monitoring" {
+    targets = prometheus.exporter.self.alloy_metrics.targets
+    forward_to = [prometheus.remote_write.mimir.receiver]
+    
+    scrape_interval = "30s"
+    metrics_path = "/metrics"
+}
+
+// Send metrics to Mimir/Prometheus
+prometheus.remote_write "mimir" {
+    endpoint {
+        url = "http://prometheus:9090/api/v1/write"
+        
+        // Add metadata labels
+        headers = {
+            "X-Prometheus-Remote-Write-Version" = "0.1.0",
+        }
+    }
+    
+    external_labels = {
+        pipeline = "alloy-unified",
+        environment = "dev",
+    }
+}

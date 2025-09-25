@@ -1,0 +1,262 @@
+{
+  "dashboard": {
+    "id": null,
+    "title": "🏦 Banking Customer Analytics Dashboard",
+    "tags": ["banking", "customer-analytics", "alloy"],
+    "timezone": "browser",
+    "panels": [
+      {
+        "id": 1,
+        "title": "Customer Tier Distribution",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "count by (customer_tier) ({source=\"customer_analytics\"} | json | customer_tier != \"\")",
+            "legendFormat": "{{customer_tier}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "palette-classic"
+            },
+            "custom": {
+              "hideFrom": {
+                "legend": false,
+                "tooltip": false,
+                "vis": false
+              }
+            },
+            "mappings": [],
+            "displayName": "${__field.labels.customer_tier}"
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 0,
+          "y": 0
+        }
+      },
+      {
+        "id": 2,
+        "title": "Real-time Customer Activity",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count_over_time({source=\"customer_analytics\"} [5m])",
+            "legendFormat": "Events/5min",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "red",
+                  "value": 80
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 12,
+          "y": 0
+        }
+      },
+      {
+        "id": 3,
+        "title": "High-Value Customers (Last Hour)",
+        "type": "stat",
+        "targets": [
+          {
+            "expr": "count by (customer_tier) ({source=\"customer_analytics\"} |= \"enterprise\" or |= \"premium\" | json | __error__ = \"\" | customer_tier = \"enterprise\" or customer_tier = \"premium\") [1h]",
+            "legendFormat": "High-Value",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "thresholds"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "yellow",
+                  "value": null
+                },
+                {
+                  "color": "green",
+                  "value": 5
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 4,
+          "w": 6,
+          "x": 18,
+          "y": 0
+        }
+      },
+      {
+        "id": 4,
+        "title": "Customer Behavior Patterns",
+        "type": "table",
+        "targets": [
+          {
+            "expr": "{source=\"customer_analytics\"} | json | line_format \"{{.customer_id}} | {{.customer_tier}} | {{.behavior_pattern}} | {{.activity_level}}\"",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "custom": {
+              "align": "auto",
+              "displayMode": "auto"
+            }
+          }
+        },
+        "gridPos": {
+          "h": 8,
+          "w": 12,
+          "x": 12,
+          "y": 4
+        }
+      },
+      {
+        "id": 5,
+        "title": "Transaction Amount Distribution by Customer Tier",
+        "type": "histogram",
+        "targets": [
+          {
+            "expr": "histogram_quantile(0.95, sum(rate({source=\"customer_analytics\"} | json | transaction_amount != \"\" | unwrap transaction_amount [5m])) by (customer_tier, le))",
+            "legendFormat": "{{customer_tier}} - 95th percentile",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 8,
+          "w": 24,
+          "x": 0,
+          "y": 8
+        }
+      },
+      {
+        "id": 6,
+        "title": "Customer Analytics Event Stream",
+        "type": "logs",
+        "targets": [
+          {
+            "expr": "{source=\"customer_analytics\"} | json",
+            "refId": "A"
+          }
+        ],
+        "options": {
+          "showTime": true,
+          "showLabels": true,
+          "showCommonLabels": false,
+          "wrapLogMessage": true,
+          "prettifyLogMessage": true,
+          "enableLogDetails": true,
+          "dedupStrategy": "none",
+          "sortOrder": "Descending"
+        },
+        "gridPos": {
+          "h": 10,
+          "w": 24,
+          "x": 0,
+          "y": 16
+        }
+      },
+      {
+        "id": 7,
+        "title": "Risk Profile Assessment",
+        "type": "bargauge",
+        "targets": [
+          {
+            "expr": "count by (risk_profile) ({source=\"customer_analytics\"} | json | risk_profile != \"\")",
+            "legendFormat": "{{risk_profile}}",
+            "refId": "A"
+          }
+        ],
+        "fieldConfig": {
+          "defaults": {
+            "color": {
+              "mode": "continuous-GrYlRd"
+            },
+            "thresholds": {
+              "steps": [
+                {
+                  "color": "green",
+                  "value": null
+                },
+                {
+                  "color": "yellow",
+                  "value": 10
+                },
+                {
+                  "color": "red",
+                  "value": 20
+                }
+              ]
+            }
+          }
+        },
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 0,
+          "y": 26
+        }
+      },
+      {
+        "id": 8,
+        "title": "Portfolio Category Analysis",
+        "type": "piechart",
+        "targets": [
+          {
+            "expr": "count by (portfolio_category) ({source=\"customer_analytics\"} | json | portfolio_category != \"\")",
+            "legendFormat": "{{portfolio_category}}",
+            "refId": "A"
+          }
+        ],
+        "gridPos": {
+          "h": 6,
+          "w": 12,
+          "x": 12,
+          "y": 26
+        }
+      }
+    ],
+    "time": {
+      "from": "now-1h",
+      "to": "now"
+    },
+    "timepicker": {},
+    "templating": {
+      "list": []
+    },
+    "annotations": {
+      "list": []
+    },
+    "refresh": "10s",
+    "schemaVersion": 27,
+    "version": 0,
+    "links": []
+  }
+}

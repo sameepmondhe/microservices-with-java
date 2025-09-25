@@ -9,7 +9,8 @@
 # - config-server: Runs LOCALLY as JAR (port 8888)
 # - All other services: Run as DOCKER CONTAINERS with individual Dockerfiles
 # - Orchestration: Uses ./start-services-new.sh script
-# - Observability: Loki, Promtail, Tempo, Prometheus, Grafana via scripts
+# - Observability: Loki, Alloy, Alloy (Phase 1), Tempo, Prometheus, Grafana via scripts
+# - Customer Analytics: Alloy-based banking intelligence engine (ports 12346-12347)
 #
 # ============================================================================
 
@@ -40,12 +41,12 @@ services:
   # NOTE: These services are deployed via individual Docker builds, not this compose file
   # Actual deployment: scripts/microservices.sh -> start_docker_service()
   # Each service uses its own Dockerfile with OpenTelemetry integration
-  # Logging labels: "logging=promtail" and "service=${service_name}" for log discovery
+  # Logging labels: "logging=alloy" and "service=${service_name}" for Alloy log discovery
   # ============================================================================
 
   accounts:
     # DEPLOYED VIA: docker build -t accounts-service:latest ./accounts
-    # LABELS: logging=promtail, service=accounts (for Promtail log discovery)
+    # LABELS: logging=alloy, service=accounts (for Alloy log discovery)
     # OTEL: Integrated with traces sent to otel-collector-service:4318
     build:
       context: ./accounts
@@ -56,7 +57,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
     labels:
-      - logging=promtail
+      - logging=alloy
       - service=accounts
     # depends_on:
     #   - config-server
@@ -78,7 +79,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
     labels:
-      - logging=promtail
+      - logging=alloy
       - service=cards
     # depends_on:
     #   - config-server
@@ -100,7 +101,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
     labels:
-      - logging=promtail
+      - logging=alloy
       - service=loans
     # depends_on:
     #   - config-server
@@ -114,7 +115,7 @@ services:
 
   customer:
     # DEPLOYED VIA: docker build -t customers-service:latest ./customers  
-    # LABELS: logging=promtail, service=customers (for Promtail log discovery)
+    # LABELS: logging=alloy, service=customers (for Alloy log discovery)
     # OTEL: Integrated with traces sent to otel-collector-service:4318
     build:
       context: ./customer
@@ -125,7 +126,7 @@ services:
       - SPRING_PROFILES_ACTIVE=dev
       - SPRING_CONFIG_IMPORT=optional:configserver:http://host.docker.internal:8888
     labels:
-      - logging=promtail
+      - logging=alloy
       - service=customers
     # depends_on:
     #   - config-server
@@ -181,7 +182,7 @@ networks:
 # ├── otel-collector:4317/4318 → Trace collection
 # ├── tempo:3200               → Trace storage
 # ├── loki:3100               → Log aggregation  
-# ├── promtail:9080           → Log shipping
+# ├── alloy:12345             → Unified observability (fully replaced Promtail)
 # ├── prometheus:9090         → Metrics collection
 # └── grafana:3000            → Visualization
 #
